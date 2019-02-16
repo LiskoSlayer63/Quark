@@ -54,15 +54,15 @@ public class ModKeybinds {
 	}
 
 	public static void initLockKey() {
-		lockKey = init("lockBuilding", Keyboard.KEY_K, MISC_GROUP);
+		lockKey = init("lockBuilding", Keyboard.KEY_NONE, MISC_GROUP);
 	}
 
 	public static void initAutoJumpKey() {
-		autoJumpKey = init("toggleAutojump", Keyboard.KEY_B, MISC_GROUP);
+		autoJumpKey = init("toggleAutojump", Keyboard.KEY_NONE, MISC_GROUP);
 	}
 
 	public static void initChangeHotbarKey() {
-		changeHotbarKey = init("changeHotbar", Keyboard.KEY_Z, MISC_GROUP);
+		changeHotbarKey = init("changeHotbar", Keyboard.KEY_NONE, MISC_GROUP);
 	}
 
 	public static void initDropoffKey() {
