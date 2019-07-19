@@ -10,13 +10,9 @@
  */
 package vazkii.quark.decoration.item;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.ItemMeshDefinition;
-import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -30,11 +26,14 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.arl.interf.IExtraVariantHolder;
 import vazkii.arl.item.ItemModBlock;
+import vazkii.arl.util.ModelHandler;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.decoration.block.BlockCustomChest;
 import vazkii.quark.decoration.feature.VariedChests;
 import vazkii.quark.decoration.feature.VariedChests.ChestType;
 import vazkii.quark.decoration.tile.TileCustomChest;
+
+import javax.annotation.Nonnull;
 
 public class ItemChestBlock extends ItemModBlock implements IExtraVariantHolder {
 
@@ -44,32 +43,26 @@ public class ItemChestBlock extends ItemModBlock implements IExtraVariantHolder 
 	}
 
 	@Override
-	public int getMetadata(int damage) {
-		return 0;
-	}
-
-	@Override
 	@SideOnly(Side.CLIENT)
 	public ItemMeshDefinition getCustomMeshDefinition() {
-		return new ItemMeshDefinition() {
-
-			@Override
-			public ModelResourceLocation getModelLocation(ItemStack stack) {
-				ChestType type = VariedChests.custom_chest.getCustomType(stack);
-				return getBlock() == VariedChests.custom_chest_trap ? type.trapModel : type.normalModel;
-			}
-		};
+		return stack -> ModelHandler.resourceLocations.get(getVariants()[0]);
 	}
 
 	@Override
-	public String getUnlocalizedName(ItemStack stack) {
+	public String[] getExtraVariants() {
+		return getVariants();
+	}
+
+	@Nonnull
+	@Override
+	public String getTranslationKey(ItemStack stack) {
 		ChestType type = VariedChests.custom_chest.getCustomType(stack);
 		String name = type.name + (getBlock() == VariedChests.custom_chest_trap ? "_trap" : "");
 		return "tile." + LibMisc.PREFIX_MOD + "custom_chest_" + name;
 	}
 
 	@Override
-	public boolean placeBlockAt(ItemStack stack, EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, IBlockState newState) {
+	public boolean placeBlockAt(@Nonnull ItemStack stack, @Nonnull EntityPlayer player, World world, @Nonnull BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ, @Nonnull IBlockState newState) {
 		int typeCnt = 0;
 
 		BlockPos posN = pos.north();
@@ -101,22 +94,11 @@ public class ItemChestBlock extends ItemModBlock implements IExtraVariantHolder 
 	}
 
 	@Override
-	public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> subItems) {
+	public void getSubItems(@Nonnull CreativeTabs tab, @Nonnull NonNullList<ItemStack> subItems) {
 		BlockCustomChest chest = (BlockCustomChest) Block.getBlockFromItem(this);
 		if(isInCreativeTab(tab))
 			for(ChestType type : VariedChests.ChestType.VALID_TYPES)
 				subItems.add(chest.setCustomType(new ItemStack(this, 1), type));
-	}
-
-	@Override
-	public String[] getExtraVariants() {
-		List<String> variants = new ArrayList();
-		for(ChestType type : VariedChests.ChestType.VALID_TYPES) {
-			variants.add("custom_chest_" + type.name);
-			variants.add("custom_chest_trap_" + type.name);
-		}
-
-		return variants.toArray(new String[variants.size()]);
 	}
 
 }

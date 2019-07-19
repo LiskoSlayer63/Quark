@@ -21,6 +21,8 @@ import net.minecraftforge.fml.client.registry.IRenderFactory;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+import javax.annotation.Nonnull;
+
 @SideOnly(Side.CLIENT)
 public class RenderCreeperAngry extends RenderCreeper {
 
@@ -29,23 +31,23 @@ public class RenderCreeperAngry extends RenderCreeper {
 	}
 	
 	@Override
-	protected void renderModel(EntityCreeper entitylivingbaseIn, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, float scaleFactor) {
+	protected void renderModel(@Nonnull EntityCreeper living, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch, float scaleFactor) {
 		GlStateManager.color(1F, 1F, 1F);
-		super.renderModel(entitylivingbaseIn, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch, scaleFactor);
+		super.renderModel(living, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch, scaleFactor);
 		GlStateManager.color(1F, 1F, 1F);
 	}
 
 	@Override
 	protected ResourceLocation getEntityTexture(EntityCreeper entity) {
 		if(entity.getCreeperState() == 1) {
-			float antired = 1F - (entity.getCreeperFlashIntensity(0F) / 1.17F + 0.1F);
-			GL11.glColor3f(1F, antired, antired);
+			float inverseRed = 1F - (entity.getCreeperFlashIntensity(0F) / 1.17F + 0.1F);
+			GL11.glColor3f(1F, inverseRed, inverseRed);
 		}
 		return super.getEntityTexture(entity);
 	}
 
-	public static IRenderFactory factory() {
-		return manager -> new RenderCreeperAngry(manager);
+	public static IRenderFactory<EntityCreeper> factory() {
+		return RenderCreeperAngry::new;
 	}
 
 }

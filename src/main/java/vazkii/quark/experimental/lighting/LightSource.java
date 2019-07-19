@@ -14,7 +14,7 @@ public class LightSource {
 	public final IBlockState state;
 	public final byte brightness;
 
-	byte[][][] incidences = null;
+	public byte[][][] incidences = null;
 
 	public LightSource(World world, BlockPos pos, IBlockState state, int brightness) {
 		this.world = world;
@@ -27,7 +27,7 @@ public class LightSource {
 		incidences = null;
 	}
 
-	public int getIndidence(BlockPos checkPos) {
+	public int getIncidence(BlockPos checkPos) {
 		int dist = manhattanDistance(checkPos); 
 		if(dist >= brightness)
 			return 0;
@@ -46,12 +46,12 @@ public class LightSource {
 	public boolean isValid(World world) {
 		return world.isBlockLoaded(pos) && world.getBlockState(pos).equals(state);
 	}
-	
-	final int manhattanDistance(BlockPos target) {
+
+	public final int manhattanDistance(BlockPos target) {
 		return Math.abs(pos.getX() - target.getX()) + Math.abs(pos.getY() - target.getY()) + Math.abs(pos.getZ() - target.getZ());
 	}
-	
-	void computeIncidences() {
+
+	public void computeIncidences() {
 		int size = brightness * 2 + 1;
 		incidences = new byte[size][size][size];
 
@@ -63,19 +63,18 @@ public class LightSource {
 		while(edges[0] != null) {
 			int newIndex = 0;
 
-			for(int i = 0; i < edges.length; i++) {
-				Edge edge = edges[i];
-				if(edge == null)
+			for (Edge edge : edges) {
+				if (edge == null)
 					break;
 
-				for(EnumFacing face : EnumFacing.VALUES) {
+				for (EnumFacing face : EnumFacing.VALUES) {
 					Edge next = edge.next(world, face);
-					if(next != null) {
+					if (next != null) {
 						int[] coords = posToIndex(next.pos);
 						byte curr = getIncidenceAtCoords(coords);
-						if(next.light > curr) {
+						if (next.light > curr) {
 							pushByteToCoords(coords, next.light);
-							if(newIndex >= edges2.length)
+							if (newIndex >= edges2.length)
 								return;
 
 							edges2[newIndex++] = next;
@@ -91,21 +90,20 @@ public class LightSource {
 		}
 	}
 
-	int[] posToIndex(BlockPos target) {
-		int xdiff = pos.getX() - target.getX() + brightness;
-		int ydiff = pos.getY() - target.getY() + brightness;
-		int zdiff = pos.getZ() - target.getZ() + brightness;
-		
-		int[] coords = new int[] { xdiff, ydiff, zdiff };
-		return coords;
+	public int[] posToIndex(BlockPos target) {
+		int dX = pos.getX() - target.getX() + brightness;
+		int dY = pos.getY() - target.getY() + brightness;
+		int dZ = pos.getZ() - target.getZ() + brightness;
+
+		return new int[] { dX, dY, dZ };
 	}
 
-	byte getIncidenceAtCoords(int[] coords) {
-		return (byte) (incidences[coords[0]][coords[1]][coords[2]]);
+	public byte getIncidenceAtCoords(int[] coords) {
+		return (incidences[coords[0]][coords[1]][coords[2]]);
 	}
 
-	void pushByteToCoords(int[] coords, byte b) {
-		incidences[coords[0]][coords[1]][coords[2]] = (byte) b;
+	public void pushByteToCoords(int[] coords, byte b) {
+		incidences[coords[0]][coords[1]][coords[2]] = b;
 	}
 
 
@@ -116,15 +114,15 @@ public class LightSource {
 
 	private static class Edge {
 
-		final BlockPos pos;
-		final byte light;
+		public final BlockPos pos;
+		public final byte light;
 
-		private Edge(BlockPos pos, byte light) {
+		public Edge(BlockPos pos, byte light) {
 			this.pos = pos;
 			this.light = light;
 		}
 
-		Edge next(IBlockAccess world, EnumFacing face) {
+		public Edge next(IBlockAccess world, EnumFacing face) {
 			BlockPos nextPos = pos.offset(face);
 			byte opacity = (byte) world.getBlockState(nextPos).getLightOpacity(world, nextPos);
 			if(opacity < 0)

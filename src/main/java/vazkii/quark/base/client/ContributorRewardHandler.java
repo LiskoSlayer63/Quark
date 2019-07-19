@@ -1,68 +1,79 @@
 package vazkii.quark.base.client;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Random;
-import java.util.Set;
-import java.util.WeakHashMap;
-
 import com.google.common.collect.ImmutableSet;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture.Type;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.RenderPlayerEvent;
-import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.relauncher.ReflectionHelper;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.base.lib.LibObfuscation;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.*;
+
+@Mod.EventBusSubscriber(modid = LibMisc.MOD_ID)
 public class ContributorRewardHandler {
 
-	private static final ImmutableSet<String> UUIDS = ImmutableSet.of(
+	private static final ImmutableSet<String> DEV_UUID = ImmutableSet.of(
 			"8c826f34-113b-4238-a173-44639c53b6e6",
-			"0d054077-a977-4b19-9df9-8a4d5bf20ec3");
+			"0d054077-a977-4b19-9df9-8a4d5bf20ec3",
+			"458391f5-6303-4649-b416-e4c0d18f837a");
 
-	private static final Set<EntityPlayer> done = Collections.newSetFromMap(new WeakHashMap());
-	
+	private static final Set<String> done = Collections.newSetFromMap(new WeakHashMap<>());
+
+	private static String name;
+
+	private static final Map<String, Integer> tiers = new HashMap<>();
+
+	private static Properties patreonTiers;
+
 	public static int localPatronTier = 0;
 	public static String featuredPatron = "";
-	
+
+	@SideOnly(Side.CLIENT)
+	public static void setupClient() {
+		name = Minecraft.getMinecraft().getSession().getUsername().toLowerCase();
+	}
+
 	public static void init() {
-		MinecraftForge.EVENT_BUS.register(ContributorRewardHandler.class);
 		new ThreadContributorListLoader();
+	}
+
+	public static int getTier(EntityPlayer player) {
+		return tiers.getOrDefault(player.getName().toLowerCase(Locale.ROOT), 0);
 	}
 	
 	@SubscribeEvent
+	@SideOnly(Side.CLIENT)
 	public static void onRenderPlayer(RenderPlayerEvent.Post event) {
 		EntityPlayer player = event.getEntityPlayer();
-		String uuid = player.getUUID(player.getGameProfile()).toString();
-		if(player instanceof AbstractClientPlayer && UUIDS.contains(uuid) && !done.contains(player)) {
-			AbstractClientPlayer clplayer = (AbstractClientPlayer) player;
-			if(clplayer.hasPlayerInfo()) {
-				NetworkPlayerInfo info = ReflectionHelper.getPrivateValue(AbstractClientPlayer.class, clplayer, LibObfuscation.PLAYER_INFO);
-				Map<Type, ResourceLocation> textures = ReflectionHelper.getPrivateValue(NetworkPlayerInfo.class, info, LibObfuscation.PLAYER_TEXTURES);
+		String uuid = EntityPlayer.getUUID(player.getGameProfile()).toString();
+		if(player instanceof AbstractClientPlayer && DEV_UUID.contains(uuid) && !done.contains(uuid)) {
+			AbstractClientPlayer clientPlayer = (AbstractClientPlayer) player;
+			if(clientPlayer.hasPlayerInfo()) {
+				NetworkPlayerInfo info = ObfuscationReflectionHelper.getPrivateValue(AbstractClientPlayer.class, clientPlayer, LibObfuscation.PLAYER_INFO);
+				Map<Type, ResourceLocation> textures = ObfuscationReflectionHelper.getPrivateValue(NetworkPlayerInfo.class, info, LibObfuscation.PLAYER_TEXTURES);
 				ResourceLocation loc = new ResourceLocation("quark", "textures/misc/dev_cape.png");
 				textures.put(Type.CAPE, loc);
 				textures.put(Type.ELYTRA, loc);
-				done.add(player);
+				done.add(uuid);
 			}
 		}
 	}
 	
 	private static void load(Properties props) {
-		List<String> allPatrons = new ArrayList(props.size());
-		
-		String name = Minecraft.getMinecraft().getSession().getUsername().toLowerCase();
+		List<String> allPatrons = new ArrayList<>(props.size());
+
 		props.forEach((k, v) -> {
 			String key = (String) k;
 			String value = (String) v;
@@ -70,15 +81,16 @@ public class ContributorRewardHandler {
 			int tier = Integer.parseInt(value);
 			if(tier < 10)
 				allPatrons.add(key);
+			tiers.put(key.toLowerCase(Locale.ROOT), tier);
 			
-			if(key.toLowerCase().equals(name))
+			if(name != null && key.toLowerCase(Locale.ROOT).equals(name))
 				localPatronTier = tier;
 		});
 		
 		if(!allPatrons.isEmpty())
 			featuredPatron = allPatrons.get((int) (Math.random() * allPatrons.size()));
 	}
-	
+
 	private static class ThreadContributorListLoader extends Thread {
 
 		public ThreadContributorListLoader() {
@@ -91,10 +103,10 @@ public class ContributorRewardHandler {
 		public void run() {
 			try {
 				URL url = new URL("https://raw.githubusercontent.com/Vazkii/Quark/master/contributors.properties");
-				Properties props = new Properties();
+				patreonTiers = new Properties();
 				try (InputStreamReader reader = new InputStreamReader(url.openStream())) {
-					props.load(reader);
-					load(props);
+					patreonTiers.load(reader);
+					load(patreonTiers);
 				}
 			} catch (IOException e) {
 				e.printStackTrace();

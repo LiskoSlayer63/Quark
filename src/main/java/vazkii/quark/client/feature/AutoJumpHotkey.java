@@ -20,7 +20,6 @@ import net.minecraft.client.settings.GameSettings.Options;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
@@ -39,11 +38,11 @@ public class AutoJumpHotkey extends Feature {
 	private static final ResourceLocation AUTOJUMP_OFF = new ResourceLocation("quark", "textures/misc/autojump_off.png");
 	private static final ResourceLocation AUTOJUMP_ON = new ResourceLocation("quark", "textures/misc/autojump_on.png");
 
-	int hudTime;
+	public static int hudTime;
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		ModKeybinds.initAutoJumpKey();
 	}
 
@@ -79,7 +78,6 @@ public class AutoJumpHotkey extends Feature {
 		int y = res.getScaledHeight() - 100;
 		boolean autojumpEnabled = mc.gameSettings.getOptionOrdinalValue(Options.AUTO_JUMP);
 
-		Math.min(FADE_TIME, hudTime + DISPLAY_TIME);
 		float alpha = (hudTime + event.getPartialTicks()) / FADE_TIME;
 
 		GlStateManager.pushMatrix();

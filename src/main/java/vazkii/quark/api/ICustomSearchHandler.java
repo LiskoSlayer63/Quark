@@ -1,10 +1,13 @@
 package vazkii.quark.api;
 
 import net.minecraft.item.ItemStack;
+import vazkii.quark.api.capability.ISearchHandler;
 
 /**
  * Implement on an Item to allow it to respond to chest search
  * bar queries.
+ *
+ * This should not be manually checked for. Instead, check if the stack provides {@link ISearchHandler}.
  */
 public interface ICustomSearchHandler {
 
@@ -27,13 +30,13 @@ public interface ICustomSearchHandler {
 	 * 
 	 * @return false if the item should be darkened, true otherwise 
 	 */
-	public boolean stackMatchesSearchQuery(ItemStack stack, String query, StringMatcher matcher, SearchMethod search);
+	boolean stackMatchesSearchQuery(ItemStack stack, String query, StringMatcher matcher, SearchMethod search);
 
-	public static interface StringMatcher {
+	interface StringMatcher {
 		boolean matches(String str1, String str2);
 	}
 	
-	public static interface SearchMethod {
+	interface SearchMethod {
 		boolean namesMatch(ItemStack stack, String query);
 	}
 	

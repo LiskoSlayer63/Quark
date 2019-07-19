@@ -7,7 +7,14 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
+@SideOnly(Side.CLIENT)
 public class EmoteDescriptor {
+
+	public static final ResourceLocation TIER_1 = new ResourceLocation("quark", "textures/emotes/patreon_t1.png");
+	public static final ResourceLocation TIER_2 = new ResourceLocation("quark", "textures/emotes/patreon_t2.png");
+	public static final ResourceLocation TIER_3 = new ResourceLocation("quark", "textures/emotes/patreon_t3.png");
+	public static final ResourceLocation TIER_4 = new ResourceLocation("quark", "textures/emotes/patreon_t4.png");
+	public static final ResourceLocation TIER_GOD = new ResourceLocation("quark", "textures/emotes/patreon_t99.png");
 
 	public final Class<? extends EmoteBase> clazz;
 	public final int index;
@@ -31,14 +38,18 @@ public class EmoteDescriptor {
 		this.template = template;
 		this.tier = template.tier;
 	}
+
+	public void updateTier(EmoteTemplate template) {
+		this.tier = template.tier;
+	}
 	
-	public String getUnlocalizedName() {
+	public String getTranslationKey() {
 		return "quark.emote." + name;
 	}
 	
 	@SideOnly(Side.CLIENT)
 	public String getLocalizedName() {
-		return I18n.format(getUnlocalizedName());
+		return I18n.format(getTranslationKey());
 	}
 	
 	public String getRegistryName() {
@@ -47,6 +58,20 @@ public class EmoteDescriptor {
 	
 	public int getTier() {
 		return tier;
+	}
+
+	public ResourceLocation getTierTexture() {
+		if (tier >= 99)
+			return TIER_GOD;
+		if (tier >= 4)
+			return TIER_4;
+		if (tier >= 3)
+			return TIER_3;
+		if (tier >= 2)
+			return TIER_2;
+		if (tier >= 1)
+			return TIER_1;
+		return null;
 	}
 	
 	public EmoteBase instantiate(EntityPlayer player, ModelBiped model, ModelBiped armorModel, ModelBiped armorLegModel) {

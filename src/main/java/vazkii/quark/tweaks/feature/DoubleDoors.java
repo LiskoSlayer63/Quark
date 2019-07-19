@@ -10,8 +10,6 @@
  */
 package vazkii.quark.tweaks.feature;
 
-import java.util.Iterator;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockDoor;
 import net.minecraft.block.material.Material;
@@ -31,9 +29,11 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.tweaks.ai.EntityAIOpenDoubleDoor;
 
+import java.util.Iterator;
+
 public class DoubleDoors extends Feature {
 
-	boolean allowVillagers = true;
+	public static boolean allowVillagers = true;
 	
 	@Override
 	public void setupConfig() {
@@ -59,7 +59,7 @@ public class DoubleDoors extends Feature {
 	
 	@SubscribeEvent(priority = EventPriority.LOWEST)
 	public void onPlayerInteract(PlayerInteractEvent.RightClickBlock event) {
-		if(event.getEntityPlayer().isSneaking() || event.isCanceled() || event.getResult() == Result.DENY)
+		if(event.getEntityPlayer().isSneaking() || event.isCanceled() || event.getResult() == Result.DENY || event.getUseBlock() == Result.DENY)
 			return;
 
 		World world = event.getWorld();
@@ -77,7 +77,7 @@ public class DoubleDoors extends Feature {
 		BlockPos doorPos = state.getValue(BlockDoor.HALF) == BlockDoor.EnumDoorHalf.LOWER ? mirrorPos : mirrorPos.down();
 		IBlockState other = world.getBlockState(doorPos).getActualState(world, doorPos);
 
-		if(block.getMaterial(state) != Material.IRON && other.getBlock() == (BlockDoor) block && other.getValue(BlockDoor.FACING) == direction && other.getValue(BlockDoor.OPEN) == isOpen && other.getValue(BlockDoor.HINGE) != isMirrored) {
+		if(state.getMaterial() != Material.IRON && other.getBlock() == block && other.getValue(BlockDoor.FACING) == direction && other.getValue(BlockDoor.OPEN) == isOpen && other.getValue(BlockDoor.HINGE) != isMirrored) {
 
 			IBlockState newState = other.cycleProperty(BlockDoor.OPEN);
 			world.setBlockState(doorPos, newState, 10);

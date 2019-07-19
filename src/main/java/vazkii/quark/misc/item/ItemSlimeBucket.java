@@ -17,7 +17,6 @@ import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.monster.EntitySlime;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumActionResult;
@@ -28,10 +27,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
-import net.minecraftforge.oredict.OreDictionary;
 import vazkii.arl.item.ItemMod;
 import vazkii.arl.util.ItemNBTHelper;
 import vazkii.quark.base.item.IQuarkItem;
+
+import javax.annotation.Nonnull;
 
 public class ItemSlimeBucket extends ItemMod implements IQuarkItem {
 
@@ -50,13 +50,13 @@ public class ItemSlimeBucket extends ItemMod implements IQuarkItem {
 	}
 
 	@Override
-	public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> subItems) {
+	public void getSubItems(@Nonnull CreativeTabs tab, @Nonnull NonNullList<ItemStack> subItems) {
 		if(isInCreativeTab(tab))
 			subItems.add(new ItemStack(this));
 	}
 
 	@Override
-	public void onUpdate(ItemStack stack, World world, Entity entity, int something, boolean somethingelse) {
+	public void onUpdate(ItemStack stack, World world, Entity entity, int itemSlot, boolean isSelected) {
 		if(!world.isRemote) {
 			int x = MathHelper.floor(entity.posX);
 			int z = MathHelper.floor(entity.posZ);
@@ -68,11 +68,12 @@ public class ItemSlimeBucket extends ItemMod implements IQuarkItem {
 		}
 	}
 
+	@Nonnull
 	@Override
 	public EnumActionResult onItemUse(EntityPlayer playerIn, World worldIn, BlockPos pos, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ) {
-		double x = pos.getX() + 0.5 + facing.getFrontOffsetX();
-		double y = pos.getY() + 0.5 + facing.getFrontOffsetY();
-		double z = pos.getZ() + 0.5 + facing.getFrontOffsetZ();
+		double x = pos.getX() + 0.5 + facing.getXOffset();
+		double y = pos.getY() + 0.5 + facing.getYOffset();
+		double z = pos.getZ() + 0.5 + facing.getZOffset();
 
 		if(!worldIn.isRemote) {
 			EntitySlime slime = new EntitySlime(worldIn);
@@ -97,8 +98,9 @@ public class ItemSlimeBucket extends ItemMod implements IQuarkItem {
 	}
 	
 
+	@Nonnull
 	@Override
-	public String getItemStackDisplayName(ItemStack stack) {
+	public String getItemStackDisplayName(@Nonnull ItemStack stack) {
 		if(stack.hasTagCompound()) {
 			NBTTagCompound cmp = ItemNBTHelper.getCompound(stack, TAG_ENTITY_DATA, false);
 			if(cmp != null && cmp.hasKey("CustomName")) 
@@ -108,13 +110,8 @@ public class ItemSlimeBucket extends ItemMod implements IQuarkItem {
 		return super.getItemStackDisplayName(stack);
 	}
 
-	@Override
-	public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
-		return super.shouldCauseReequipAnimation(oldStack, newStack, slotChanged);
-	}
-
 	public static boolean isSlimeChunk(World world, int x, int z) {
-		Chunk chunk = world.getChunkFromBlockCoords(new BlockPos(x, 0, z));
+		Chunk chunk = world.getChunk(new BlockPos(x, 0, z));
 		return chunk.getRandomWithSeed(987234911L).nextInt(10) == 0;
 	}
 

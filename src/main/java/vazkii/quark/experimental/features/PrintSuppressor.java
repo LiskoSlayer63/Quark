@@ -10,20 +10,16 @@
  */
 package vazkii.quark.experimental.features;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import org.apache.commons.io.output.NullOutputStream;
+import vazkii.quark.base.Quark;
+import vazkii.quark.base.module.Feature;
+
 import java.io.PrintStream;
 import java.util.function.Consumer;
 
-import org.apache.logging.log4j.Level;
-
-import net.minecraftforge.fml.common.FMLLog;
-import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
-import vazkii.quark.base.module.Feature;
-
 public class PrintSuppressor extends Feature {
 
-	boolean suppressOut, suppressErr;
+	public static boolean suppressOut, suppressErr;
 
 	@Override
 	public void setupConfig() {
@@ -32,8 +28,8 @@ public class PrintSuppressor extends Feature {
 	}
 
 	@Override
-	public void postInit(FMLPostInitializationEvent event) {
-		FMLLog.log(Level.WARN, "Quark print suppression is enabled. Important info might be missing. Suppressing STDOUT=%b, STDERR=%b", suppressOut, suppressErr);
+	public void postInit() {
+		Quark.LOG.warn("Quark print suppression is enabled. Important info might be missing. Suppressing STDOUT=%b, STDERR=%b", suppressOut, suppressErr);
 
 		if(suppressOut)
 			oppressFreedomOfSpeech(System::setOut);
@@ -42,12 +38,9 @@ public class PrintSuppressor extends Feature {
 	}
 
 	private void oppressFreedomOfSpeech(Consumer<PrintStream> consumer) {
-		PrintStream oppressedStream = new PrintStream(new OutputStream() {
-			@Override public void write(int b) throws IOException {
-				// NO-OP
-			}
-		});
+		PrintStream oppressedStream = new PrintStream(new NullOutputStream());
 
+		// Accept your oppression, consumer
 		consumer.accept(oppressedStream);
 	}
 

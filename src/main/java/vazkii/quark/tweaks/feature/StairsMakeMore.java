@@ -10,11 +10,6 @@
  */
 package vazkii.quark.tweaks.feature;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockStairs;
 import net.minecraft.block.state.IBlockState;
@@ -27,22 +22,22 @@ import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.item.crafting.ShapedRecipes;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.oredict.OreDictionary;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 import vazkii.arl.recipe.MultiRecipe;
 import vazkii.arl.recipe.RecipeHandler;
 import vazkii.quark.base.module.Feature;
 
+import java.util.*;
+
 public class StairsMakeMore extends Feature {
 
-	public static Map<IBlockState, ItemStack> stairs = new HashMap();
-	
-	int targetSize;
-	int originalSize;
-	boolean reversionRecipe;
-	boolean enableSlabToStair;
+	public static final Map<IBlockState, ItemStack> stairs = new HashMap<>();
+
+	public static int targetSize;
+	public static int originalSize;
+	public static boolean reversionRecipe;
+	public static boolean enableSlabToStair;
 	
 	private MultiRecipe slabMultiRecipe, returnMultiRecipe;
 
@@ -55,55 +50,64 @@ public class StairsMakeMore extends Feature {
 	}
 	
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {
+	public void postPreInit() {
 		if(enableSlabToStair)
 			slabMultiRecipe = new MultiRecipe(new ResourceLocation("quark", "slabs_to_stairs"));
 		if(reversionRecipe)
 			returnMultiRecipe = new MultiRecipe(new ResourceLocation("quark", "stairs_to_blocks"));
 	}
 
+	public static ItemStack findResult(NonNullList<Ingredient> ingredients, int expected) {
+		ItemStack outStack = ItemStack.EMPTY;
+		int inputItems = 0;
+
+		for(Ingredient ingredient : ingredients) {
+			ItemStack recipeItem = ItemStack.EMPTY;
+			ItemStack[] matches = ingredient.getMatchingStacks();
+			if(matches.length > 0)
+				recipeItem = matches[0];
+
+			if(recipeItem != null && !recipeItem.isEmpty()) {
+				if(outStack.isEmpty())
+					outStack = recipeItem;
+
+				if(ItemStack.areItemsEqual(outStack, recipeItem))
+					inputItems++;
+				else {
+					outStack = ItemStack.EMPTY;
+					break;
+				}
+			}
+		}
+
+		if (inputItems != expected)
+			return ItemStack.EMPTY;
+
+		return outStack;
+	}
+
 	@Override
-	public void postInit(FMLPostInitializationEvent event) {
-		List<ResourceLocation> recipeList = new ArrayList(CraftingManager.REGISTRY.getKeys());
+	@SuppressWarnings("deprecation")
+	public void postInit() {
+		List<ResourceLocation> recipeList = new ArrayList<>(CraftingManager.REGISTRY.getKeys());
 		for(ResourceLocation res : recipeList) {
-			IRecipe recipe = CraftingManager.REGISTRY.getObject(res);
+			IRecipe recipe = Objects.requireNonNull(CraftingManager.REGISTRY.getObject(res));
 			ItemStack output = recipe.getRecipeOutput();
 			if(!output.isEmpty() && output.getCount() == originalSize) {
 				Item outputItem = output.getItem();
 				Block outputBlock = Block.getBlockFromItem(outputItem);
-				if(outputBlock != null && outputBlock instanceof BlockStairs) {
+				if(outputBlock instanceof BlockStairs) {
 					output.setCount(targetSize);
 
 					if(recipe instanceof ShapedRecipes || recipe instanceof ShapedOreRecipe) {
 						NonNullList<Ingredient> recipeItems;
 						if(recipe instanceof ShapedRecipes)
 							recipeItems = ((ShapedRecipes) recipe).recipeItems;
-						else recipeItems = ((ShapedOreRecipe) recipe).getIngredients();
+						else recipeItems = recipe.getIngredients();
 
-						ItemStack outStack = ItemStack.EMPTY;
-						int inputItems = 0;
+						ItemStack outStack = findResult(recipeItems, 6);
 
-						for(Ingredient ingredient : recipeItems) {
-							ItemStack recipeItem = ItemStack.EMPTY;
-							ItemStack[] matches = ingredient.getMatchingStacks();
-							if(matches.length > 0)
-								recipeItem = matches[0];
-							
-							if(recipeItem != null && !((ItemStack) recipeItem).isEmpty()) {
-								ItemStack recipeStack = (ItemStack) recipeItem;
-								if(outStack.isEmpty())
-									outStack = recipeStack;
-								
-								if(ItemStack.areItemsEqual(outStack, recipeStack))
-									inputItems++;
-								else {
-									outStack = ItemStack.EMPTY;
-									break;
-								}
-							}
-						}
-
-						if(!outStack.isEmpty() && inputItems == 6) {
+						if(!outStack.isEmpty()) {
 							ItemStack outCopy = outStack.copy();
 							if(outCopy.getItemDamage() == OreDictionary.WILDCARD_VALUE)
 								outCopy.setItemDamage(0);
@@ -126,7 +130,7 @@ public class StairsMakeMore extends Feature {
 	}
 	
 	@Override
-	public void finalInit(FMLPostInitializationEvent event) {
+	public void finalInit() {
 		if(enableSlabToStair && !stairs.isEmpty() && !SlabsToBlocks.slabs.isEmpty())
 			for(IBlockState state : stairs.keySet()) 			
 				if(SlabsToBlocks.slabs.containsKey(state)) {

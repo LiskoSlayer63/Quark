@@ -20,7 +20,9 @@ import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import vazkii.arl.recipe.ModRecipe;
-import vazkii.quark.misc.feature.EnderdragonScales;
+import vazkii.arl.util.ItemNBTHelper;
+
+import javax.annotation.Nonnull;
 
 public class FireworkCloningRecipe extends ModRecipe {
 	
@@ -29,7 +31,7 @@ public class FireworkCloningRecipe extends ModRecipe {
 	}
 
 	@Override
-	public boolean matches(InventoryCrafting var1, World var2) {
+	public boolean matches(@Nonnull InventoryCrafting var1, @Nonnull World var2) {
 		boolean foundSource = false;
 		boolean foundTarget = false;
 		ItemStack source = ItemStack.EMPTY;
@@ -58,8 +60,9 @@ public class FireworkCloningRecipe extends ModRecipe {
 		return foundSource && foundTarget && getFlight(source) == getFlight(target);
 	}
 
+	@Nonnull
 	@Override
-	public ItemStack getCraftingResult(InventoryCrafting var1) {
+	public ItemStack getCraftingResult(@Nonnull InventoryCrafting var1) {
 		ItemStack source = ItemStack.EMPTY;
 		ItemStack target = ItemStack.EMPTY;
 
@@ -75,7 +78,7 @@ public class FireworkCloningRecipe extends ModRecipe {
 		if(!source.isEmpty() && !target.isEmpty()) {
 			ItemStack copy = target.copy();
 			NBTTagCompound cmp = new NBTTagCompound();
-			cmp.setTag("Fireworks", source.getTagCompound().getTag("Fireworks"));
+			cmp.setTag("Fireworks", ItemNBTHelper.getCompound(source, "Fireworks", false));
 			copy.setTagCompound(cmp);
 			copy.setCount(1);
 
@@ -85,11 +88,18 @@ public class FireworkCloningRecipe extends ModRecipe {
 		return ItemStack.EMPTY;
 	}
 
+	@Nonnull
 	@Override
 	public ItemStack getRecipeOutput() {
 		return new ItemStack(Items.FIREWORKS);
 	}
 
+	@Override
+	public boolean isDynamic() {
+		return true;
+	}
+
+	@Nonnull
 	@Override
 	public NonNullList<ItemStack> getRemainingItems(InventoryCrafting inv) {
 		NonNullList<ItemStack> remaining = NonNullList.withSize(inv.getSizeInventory(), ItemStack.EMPTY);
@@ -110,11 +120,11 @@ public class FireworkCloningRecipe extends ModRecipe {
 		if(!stack.hasTagCompound())
 			return 0;
 		
-		return stack.getTagCompound().getCompoundTag("Fireworks").getByte("Flight");
+		return ItemNBTHelper.getCompound(stack, "Fireworks", false).getByte("Flight");
 	}
 	
 	private boolean hasExplosions(ItemStack stack) {
-		return stack.hasTagCompound() && stack.getTagCompound().hasKey("Fireworks") && stack.getTagCompound().getCompoundTag("Fireworks").hasKey("Explosions");
+		return ItemNBTHelper.getCompound(stack, "Fireworks", false).hasKey("Explosions");
 	}
 
 	@Override
@@ -122,6 +132,8 @@ public class FireworkCloningRecipe extends ModRecipe {
 		return true;
 	}
 	
+	@Override
+	@Nonnull
 	public NonNullList<Ingredient> getIngredients() {
 		NonNullList<Ingredient> list = NonNullList.withSize(2, Ingredient.EMPTY);
 		list.set(0, Ingredient.fromStacks(new ItemStack(Items.FIREWORKS)));

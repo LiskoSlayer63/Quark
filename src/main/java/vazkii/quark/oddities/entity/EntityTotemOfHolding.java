@@ -1,9 +1,5 @@
 package vazkii.quark.oddities.entity;
 
-import java.util.LinkedList;
-import java.util.List;
-
-import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -19,9 +15,11 @@ import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
-import net.minecraft.world.storage.loot.functions.SetDamage;
 import vazkii.quark.oddities.feature.TotemOfHolding;
-import vazkii.quark.oddities.item.ItemBackpack;
+
+import javax.annotation.Nonnull;
+import java.util.LinkedList;
+import java.util.List;
 
 public class EntityTotemOfHolding extends Entity {
 
@@ -29,13 +27,13 @@ public class EntityTotemOfHolding extends Entity {
 	private static final String TAG_DYING = "dying";
 	private static final String TAG_OWNER = "owner";
 	
-    private static final DataParameter<Boolean> DYING = EntityDataManager.<Boolean>createKey(EntityTotemOfHolding.class, DataSerializers.BOOLEAN);
+	private static final DataParameter<Boolean> DYING = EntityDataManager.createKey(EntityTotemOfHolding.class, DataSerializers.BOOLEAN);
 	
-    public static final int DEATH_TIME = 40;
+	public static final int DEATH_TIME = 40;
 
-    int deathTicks = 0;
-    String owner;
-	List<ItemStack> storedItems = new LinkedList();
+	private int deathTicks = 0;
+	private String owner;
+	private List<ItemStack> storedItems = new LinkedList<>();
 
 	public EntityTotemOfHolding(World worldIn) {
 		super(worldIn);
@@ -146,8 +144,8 @@ public class EntityTotemOfHolding extends Entity {
 	
 	private void dropEverythingAndDie() {
 		if(!TotemOfHolding.destroyItems)
-			for(int i = 0; i < storedItems.size(); i++)
-				entityDropItem(storedItems.get(i), 0);
+			for (ItemStack storedItem : storedItems)
+				entityDropItem(storedItem, 0);
 		
 		storedItems.clear();
 		
@@ -163,9 +161,9 @@ public class EntityTotemOfHolding extends Entity {
 	}
 				
 	@Override
-	protected void readEntityFromNBT(NBTTagCompound compound) {
+	protected void readEntityFromNBT(@Nonnull NBTTagCompound compound) {
 		NBTTagList list = compound.getTagList(TAG_ITEMS, 10);
-		storedItems = new LinkedList();
+		storedItems = new LinkedList<>();
 
 		for(int i = 0; i < list.tagCount(); i++) {
 			NBTTagCompound cmp = list.getCompoundTagAt(i);
@@ -180,17 +178,16 @@ public class EntityTotemOfHolding extends Entity {
 	}
 
 	@Override
-	protected void writeEntityToNBT(NBTTagCompound compound) {
+	protected void writeEntityToNBT(@Nonnull NBTTagCompound compound) {
 		NBTTagList list = new NBTTagList();
 		for(ItemStack stack : storedItems) {
-			NBTTagCompound cmp = new NBTTagCompound();
-			stack.writeToNBT(cmp);
-			list.appendTag(cmp);
+			list.appendTag(stack.serializeNBT());
 		}
 
 		compound.setTag(TAG_ITEMS, list);
 		compound.setBoolean(TAG_DYING, isDying());
-		compound.setString(TAG_OWNER, owner);
+		if (owner != null)
+			compound.setString(TAG_OWNER, owner);
 	}
 
 }

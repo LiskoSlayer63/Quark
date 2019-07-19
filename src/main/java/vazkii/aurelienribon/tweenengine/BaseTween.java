@@ -1,5 +1,7 @@
 package vazkii.aurelienribon.tweenengine;
 
+import java.util.function.Consumer;
+
 /**
  * BaseTween is the base class of Tween and Timeline. It defines the
  * iteration engine used to play animations for any number of times, and in
@@ -14,6 +16,7 @@ package vazkii.aurelienribon.tweenengine;
  * @see Timeline
  * @author Aurelien Ribon | http://www.aurelienribon.com/
  */
+@SuppressWarnings("PackageVisibleField")
 public abstract class BaseTween<T> {
 	// General
 	private int step;
@@ -70,6 +73,7 @@ public abstract class BaseTween<T> {
 	 *
 	 * @return The current object, for chaining instructions.
 	 */
+	@SuppressWarnings("unchecked")
 	public T build() {
 		return (T) this;
 	}
@@ -81,6 +85,7 @@ public abstract class BaseTween<T> {
 	 *
 	 * @return The current object, for chaining instructions.
 	 */
+	@SuppressWarnings("unchecked")
 	public T start() {
 		build();
 		currentTime = 0;
@@ -94,6 +99,7 @@ public abstract class BaseTween<T> {
 	 *
 	 * @return The current object, for chaining instructions.
 	 */
+	@SuppressWarnings("unchecked")
 	public T start(TweenManager manager) {
 		manager.add(this);
 		return (T) this;
@@ -105,6 +111,7 @@ public abstract class BaseTween<T> {
 	 * @param delay A duration.
 	 * @return The current object, for chaining instructions.
 	 */
+	@SuppressWarnings("unchecked")
 	public T delay(float delay) {
 		this.delay += delay;
 		return (T) this;
@@ -148,6 +155,7 @@ public abstract class BaseTween<T> {
 	 * @param delay A delay between each iteration.
 	 * @return The current tween or timeline, for chaining instructions.
 	 */
+	@SuppressWarnings("unchecked")
 	public T repeat(int count, float delay) {
 		if (isStarted) throw new RuntimeException("You can't change the repetitions of a tween or timeline once it is started");
 		repeatCnt = count;
@@ -165,6 +173,7 @@ public abstract class BaseTween<T> {
 	 * @param delay A delay before each repetition.
 	 * @return The current tween or timeline, for chaining instructions.
 	 */
+	@SuppressWarnings("unchecked")
 	public T repeatYoyo(int count, float delay) {
 		if (isStarted) throw new RuntimeException("You can't change the repetitions of a tween or timeline once it is started");
 		repeatCnt = count;
@@ -176,13 +185,47 @@ public abstract class BaseTween<T> {
 	/**
 	 * Sets the callback. By default, it will be fired at the completion of the
 	 * tween or timeline (event COMPLETE). If you want to change this behavior
-	 * and add more triggers, use the {@link setCallbackTriggers()} method.
+	 * and add more triggers, use the {@link #setCallbackTriggers(int)} method.
 	 *
 	 * @see TweenCallback
 	 */
+	@SuppressWarnings("unchecked")
 	public T setCallback(TweenCallback callback) {
 		this.callback = callback;
 		return (T) this;
+	}
+
+	/**
+	 * Adds a callback. By default, it will be fired at the completion of the
+	 * tween or timeline (event COMPLETE). If you want to change this behavior
+	 * and add more triggers, use the {@link #setCallbackTriggers(int)} method.
+	 *
+	 * @see TweenCallback
+	 */
+	@SuppressWarnings("unchecked")
+	public T addCallback(TweenCallback callback) {
+		if (this.callback == null)
+			this.callback = callback;
+		else
+			this.callback = this.callback.andThen(callback);
+
+		return (T) this;
+	}
+
+	/**
+	 * Adds a callback at a specific flag, enabling that flag as well.
+	 *
+	 * @see TweenCallback
+	 * @see #setCallbackTriggers(int)
+	 */
+	@SuppressWarnings("unchecked")
+	public T addCallback(int flags, Consumer<BaseTween<?>> callback) {
+		this.callbackTriggers |= flags;
+
+		return addCallback(((type, source) -> {
+			if ((flags & type) != 0)
+				callback.accept(source);
+		}));
 	}
 
 	/**
@@ -211,6 +254,7 @@ public abstract class BaseTween<T> {
 	 * @param flags one or more triggers, separated by the '|' operator.
 	 * @see TweenCallback
 	 */
+	@SuppressWarnings("unchecked")
 	public T setCallbackTriggers(int flags) {
 		this.callbackTriggers = flags;
 		return (T) this;
@@ -223,6 +267,7 @@ public abstract class BaseTween<T> {
 	 * @param data Any kind of object.
 	 * @return The current tween or timeline, for chaining instructions.
 	 */
+	@SuppressWarnings("unchecked")
 	public T setUserData(Object data) {
 		userData = data;
 		return (T) this;
@@ -255,7 +300,7 @@ public abstract class BaseTween<T> {
 	}
 
 	/**
-	 * Gets the delay occuring between two iterations.
+	 * Gets the delay occurring between two iterations.
 	 */
 	public float getRepeatDelay() {
 		return repeatDelay;
@@ -319,7 +364,7 @@ public abstract class BaseTween<T> {
 	/**
 	 * Returns true if the tween is finished (i.e. if the tween has reached
 	 * its end or has been killed). If you don't use a TweenManager, you may
-	 * want to call {@link free()} to reuse the object later.
+	 * want to call {@link #free()} to reuse the object later.
 	 */
 	public boolean isFinished() {
 		return isFinished || isKilled;
@@ -501,7 +546,7 @@ public abstract class BaseTween<T> {
 				deltaTime -= delta;
 				currentTime = 0;
 
-				updateOverride(step, step+1, isIterationStep, delta);
+				updateOverride(step, step+1, false, delta);
 				callCallback(TweenCallback.BACK_END);
 
 				if (step < 0 && repeatCnt >= 0) callCallback(TweenCallback.BACK_COMPLETE);
@@ -515,7 +560,7 @@ public abstract class BaseTween<T> {
 				deltaTime -= delta;
 				currentTime = duration;
 
-				updateOverride(step, step-1, isIterationStep, delta);
+				updateOverride(step, step-1, false, delta);
 				callCallback(TweenCallback.END);
 
 				if (step > repeatCnt*2 && repeatCnt >= 0) callCallback(TweenCallback.COMPLETE);
@@ -525,7 +570,7 @@ public abstract class BaseTween<T> {
 				float delta = deltaTime;
 				deltaTime -= delta;
 				currentTime += delta;
-				updateOverride(step, step, isIterationStep, delta);
+				updateOverride(step, step, true, delta);
 				break;
 
 			} else {

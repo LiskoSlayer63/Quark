@@ -10,9 +10,12 @@
  */
 package vazkii.quark.building.feature;
 
+import java.util.ArrayDeque;
+import java.util.Queue;
+
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import vazkii.arl.block.BlockMod;
 import vazkii.arl.block.BlockModSlab;
@@ -23,6 +26,7 @@ import vazkii.quark.base.handler.ModIntegrationHandler;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.GlobalConfig;
 import vazkii.quark.building.block.BlockWorldStoneBricks;
+import vazkii.quark.building.block.BlockWorldStoneCarved;
 import vazkii.quark.building.block.slab.BlockVanillaSlab;
 import vazkii.quark.building.block.stairs.BlockVanillaStairs;
 import vazkii.quark.world.feature.Basalt;
@@ -31,9 +35,14 @@ import vazkii.quark.world.feature.RevampStoneGen;
 public class WorldStoneBricks extends Feature {
 
 	public static BlockMod world_stone_bricks;
+	public static BlockMod world_stone_chiseled;
 
-	boolean enableStairsAndSlabs;
-	boolean enableWalls;
+	public static final BlockModSlab[] slabs = new BlockVanillaSlab[BlockWorldStoneBricks.Variants.values().length];
+
+	public static boolean enableStairsAndSlabs;
+	public static boolean enableWalls;
+	
+	private Queue<Runnable> deferedInit = new ArrayDeque<>();
 
 	@Override
 	public void setupConfig() {
@@ -42,80 +51,73 @@ public class WorldStoneBricks extends Feature {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public void preInit(FMLPreInitializationEvent event) {
 		world_stone_bricks = new BlockWorldStoneBricks();
+		world_stone_chiseled = new BlockWorldStoneCarved();
 
 		if(enableStairsAndSlabs) {
-			for(BlockWorldStoneBricks.Variants variant : BlockWorldStoneBricks.Variants.class.getEnumConstants()) {
+			for(BlockWorldStoneBricks.Variants variant : BlockWorldStoneBricks.Variants.values()) {
 				if(!variant.isEnabled())
 					continue;
 
 				IBlockState state = world_stone_bricks.getDefaultState().withProperty(world_stone_bricks.getVariantProp(), variant);
-				String name = variant.getName() + "_stairs";
-				BlockModStairs.initStairs(world_stone_bricks, variant.ordinal(), new BlockVanillaStairs(name, state));
-			}
+				BlockModStairs.initStairs(world_stone_bricks, variant.ordinal(), new BlockVanillaStairs(variant.getName() + "_stairs", state));
 
-			for(BlockWorldStoneBricks.Variants variant : BlockWorldStoneBricks.Variants.class.getEnumConstants()) {
-				if(!variant.isEnabled())
-					continue;
-
-				IBlockState state = world_stone_bricks.getDefaultState().withProperty(world_stone_bricks.getVariantProp(), variant);
-				String name = variant.getName() + "_slab";
-				BlockModSlab.initSlab(world_stone_bricks, variant.ordinal(), new BlockVanillaSlab(name , state, false), new BlockVanillaSlab(name, state, true));
+				slabs[variant.ordinal()] = BlockVanillaSlab.initSlab(world_stone_bricks, variant.ordinal(), state, variant.getName() + "_slab");
 			}
 		}
 
-		if(enableWalls)
-		for(BlockWorldStoneBricks.Variants variant : BlockWorldStoneBricks.Variants.class.getEnumConstants()) {
-			if(!variant.isEnabled())
-				continue;
+		if(enableWalls) {
+			for (BlockWorldStoneBricks.Variants variant : BlockWorldStoneBricks.Variants.values()) {
+				if (!variant.isEnabled())
+					continue;
 
-			world_stone_bricks.getDefaultState().withProperty(world_stone_bricks.getVariantProp(), variant);
-			String name = variant.getName();
-			VanillaWalls.add(name, world_stone_bricks, variant.ordinal(), true);
+				world_stone_bricks.getDefaultState().withProperty(world_stone_bricks.getVariantProp(), variant);
+				String name = variant.getName();
+				VanillaWalls.add(name, world_stone_bricks, variant.ordinal(), true);
+			}
 		}
 	}
 
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {		
+	public void postPreInit() {
 		for(int i = 0; i < 3; i++)
-			RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(world_stone_bricks, 4, i),
-					"SS", "SS",
-					'S', ProxyRegistry.newStack(Blocks.STONE, 1, i * 2 + 2));
+			addRecipes(BlockWorldStoneBricks.Variants.values()[i], ProxyRegistry.newStack(Blocks.STONE, 1, i * 2 + 2));
 
-		if(BlockWorldStoneBricks.Variants.STONE_BASALT_BRICKS.isEnabled()) {
-			RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(world_stone_bricks, 4, 3),
-					"SS", "SS",
-					'S', ProxyRegistry.newStack(Basalt.basalt, 1, 1));
-		}
+		addRecipes(BlockWorldStoneBricks.Variants.STONE_BASALT_BRICKS, ProxyRegistry.newStack(Basalt.basalt, 1, 1));
+		addRecipes(BlockWorldStoneBricks.Variants.STONE_MARBLE_BRICKS, ProxyRegistry.newStack(RevampStoneGen.marble, 1, 1));
+		addRecipes(BlockWorldStoneBricks.Variants.STONE_LIMESTONE_BRICKS, ProxyRegistry.newStack(RevampStoneGen.limestone, 1, 1));
+		addRecipes(BlockWorldStoneBricks.Variants.STONE_JASPER_BRICKS, ProxyRegistry.newStack(RevampStoneGen.jasper, 1, 1));
+		addRecipes(BlockWorldStoneBricks.Variants.STONE_SLATE_BRICKS, ProxyRegistry.newStack(RevampStoneGen.slate, 1, 1));
+	}
+	
+	private void addRecipes(BlockWorldStoneBricks.Variants variant, ItemStack baseStack) {
+		if(!variant.isEnabled())
+			return;
 		
-		if(BlockWorldStoneBricks.Variants.STONE_MARBLE_BRICKS.isEnabled()) {
-			RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(world_stone_bricks, 4, 4),
-					"SS", "SS",
-					'S', ProxyRegistry.newStack(RevampStoneGen.marble, 1, 1));
-		}
+		int meta = variant.ordinal();
 		
-		if(BlockWorldStoneBricks.Variants.STONE_LIMESTONE_BRICKS.isEnabled()) {
-			RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(world_stone_bricks, 4, 5),
-					"SS", "SS",
-					'S', ProxyRegistry.newStack(RevampStoneGen.limestone, 1, 1));
-		}
+		RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(world_stone_bricks, 4, meta),
+				"SS", "SS",
+				'S', baseStack);
+
+		if (enableStairsAndSlabs)
+			RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(world_stone_chiseled, 1, meta),
+					"S", "S",
+					'S', ProxyRegistry.newStack(slabs[meta]));
+		else
+			RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(world_stone_chiseled, 8, meta),
+					"SSS", "S S", "SSS",
+					'S', ProxyRegistry.newStack(world_stone_bricks, 1, 3));
+		
+		deferedInit.add(() -> ModIntegrationHandler.registerChiselVariant(variant.blockName, new ItemStack(world_stone_bricks, 1, meta)));
 	}
 
 	@Override
-	public void init(FMLInitializationEvent event) {
-		ModIntegrationHandler.registerChiselVariant("granite", ProxyRegistry.newStack(world_stone_bricks, 1, 0));
-		ModIntegrationHandler.registerChiselVariant("diorite", ProxyRegistry.newStack(world_stone_bricks, 1, 1));
-		ModIntegrationHandler.registerChiselVariant("andesite", ProxyRegistry.newStack(world_stone_bricks, 1, 2));
-
-		if(BlockWorldStoneBricks.Variants.STONE_BASALT_BRICKS.isEnabled())
-			ModIntegrationHandler.registerChiselVariant("basalt", ProxyRegistry.newStack(world_stone_bricks, 1, 3));
-
-		if(BlockWorldStoneBricks.Variants.STONE_MARBLE_BRICKS.isEnabled())
-			ModIntegrationHandler.registerChiselVariant("marble", ProxyRegistry.newStack(world_stone_bricks, 1, 4));
-
-		if(BlockWorldStoneBricks.Variants.STONE_LIMESTONE_BRICKS.isEnabled())
-			ModIntegrationHandler.registerChiselVariant("limestone", ProxyRegistry.newStack(world_stone_bricks, 1, 5));
+	public void init() {
+		while(!deferedInit.isEmpty())
+			deferedInit.poll().run();
 	}
 	
 	@Override

@@ -11,6 +11,8 @@ import net.minecraft.world.World;
 import vazkii.arl.block.BlockModFalling;
 import vazkii.quark.base.block.IQuarkBlock;
 
+import javax.annotation.Nonnull;
+
 public class BlockSugar extends BlockModFalling implements IQuarkBlock {
 
 	public BlockSugar() {
@@ -20,7 +22,7 @@ public class BlockSugar extends BlockModFalling implements IQuarkBlock {
 		setCreativeTab(CreativeTabs.BUILDING_BLOCKS);
 	}
 
-	protected boolean tryTouchWater(World worldIn, BlockPos pos, IBlockState state) {
+	protected boolean tryTouchWater(World worldIn, BlockPos pos) {
 		boolean flag = false;
 
 		for(EnumFacing enumfacing : EnumFacing.values())
@@ -42,14 +44,14 @@ public class BlockSugar extends BlockModFalling implements IQuarkBlock {
 	}
 
 	@Override
-	public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
-		if(!tryTouchWater(worldIn, pos, state))
+	public void neighborChanged(IBlockState state, World worldIn, @Nonnull BlockPos pos, Block blockIn, BlockPos fromPos) {
+		if(!tryTouchWater(worldIn, pos))
 			super.neighborChanged(state, worldIn, pos, blockIn, fromPos);
 	}
 
 	@Override
-	public void onBlockAdded(World worldIn, BlockPos pos, IBlockState state) {
-		if(!tryTouchWater(worldIn, pos, state))
+	public void onBlockAdded(World worldIn, @Nonnull BlockPos pos, IBlockState state) {
+		if(!tryTouchWater(worldIn, pos))
 			super.onBlockAdded(worldIn, pos, state);
 	}
 

@@ -1,10 +1,6 @@
 package vazkii.quark.oddities.tile;
 
-import java.util.Random;
-
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.inventory.Container;
 import net.minecraft.inventory.InventoryHelper;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -15,7 +11,9 @@ import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.IInteractionObject;
 import vazkii.arl.block.tile.TileSimpleInventory;
-import vazkii.quark.oddities.inventory.ContainerMatrixEnchanting;
+
+import javax.annotation.Nonnull;
+import java.util.Random;
 
 // mostly a copy of TileEntityEnchantmentTable
 public abstract class TileMatrixEnchanterBase extends TileSimpleInventory implements ITickable, IInteractionObject {
@@ -36,6 +34,7 @@ public abstract class TileMatrixEnchanterBase extends TileSimpleInventory implem
 		return false;
 	}
 
+	@Nonnull
 	@Override
 	public NBTTagCompound writeToNBT(NBTTagCompound compound) {
 		super.writeToNBT(compound);
@@ -56,83 +55,72 @@ public abstract class TileMatrixEnchanterBase extends TileSimpleInventory implem
 
 	@Override
 	public void update() {
-		doVanillaUpdateyThings();
+		performVanillaUpdate();
 	}
 
-	private void doVanillaUpdateyThings() {
-        this.bookSpreadPrev = this.bookSpread;
-        this.bookRotationPrev = this.bookRotation;
-        EntityPlayer entityplayer = this.world.getClosestPlayer((double)((float)this.pos.getX() + 0.5F), (double)((float)this.pos.getY() + 0.5F), (double)((float)this.pos.getZ() + 0.5F), 3.0D, false);
+	private void performVanillaUpdate() {
+		this.bookSpreadPrev = this.bookSpread;
+		this.bookRotationPrev = this.bookRotation;
+		EntityPlayer entityplayer = this.world.getClosestPlayer((this.pos.getX() + 0.5F), (this.pos.getY() + 0.5F), (this.pos.getZ() + 0.5F), 3.0D, false);
 
-        if (entityplayer != null)
-        {
-            double d0 = entityplayer.posX - (double)((float)this.pos.getX() + 0.5F);
-            double d1 = entityplayer.posZ - (double)((float)this.pos.getZ() + 0.5F);
-            this.tRot = (float)MathHelper.atan2(d1, d0);
-            this.bookSpread += 0.1F;
+		if (entityplayer != null)
+		{
+			double d0 = entityplayer.posX - (this.pos.getX() + 0.5F);
+			double d1 = entityplayer.posZ - (this.pos.getZ() + 0.5F);
+			this.tRot = (float)MathHelper.atan2(d1, d0);
+			this.bookSpread += 0.1F;
 
-            if (this.bookSpread < 0.5F || rand.nextInt(40) == 0)
-            {
-                float f1 = this.flipT;
+			if (this.bookSpread < 0.5F || rand.nextInt(40) == 0)
+			{
+				float f1 = this.flipT;
 
-                while (true)
-                {
-                    this.flipT += (float)(rand.nextInt(4) - rand.nextInt(4));
+				do {
+					this.flipT += (rand.nextInt(4) - rand.nextInt(4));
+				} while (!(f1 != this.flipT));
+			}
+		}
+		else
+		{
+			this.tRot += 0.02F;
+			this.bookSpread -= 0.1F;
+		}
 
-                    if (f1 != this.flipT)
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-        else
-        {
-            this.tRot += 0.02F;
-            this.bookSpread -= 0.1F;
-        }
+		while (this.bookRotation >= (float)Math.PI)
+		{
+			this.bookRotation -= ((float)Math.PI * 2F);
+		}
 
-        while (this.bookRotation >= (float)Math.PI)
-        {
-            this.bookRotation -= ((float)Math.PI * 2F);
-        }
+		while (this.bookRotation < -(float)Math.PI)
+		{
+			this.bookRotation += ((float)Math.PI * 2F);
+		}
 
-        while (this.bookRotation < -(float)Math.PI)
-        {
-            this.bookRotation += ((float)Math.PI * 2F);
-        }
+		while (this.tRot >= (float)Math.PI)
+		{
+			this.tRot -= ((float)Math.PI * 2F);
+		}
 
-        while (this.tRot >= (float)Math.PI)
-        {
-            this.tRot -= ((float)Math.PI * 2F);
-        }
+		while (this.tRot < -(float)Math.PI)
+		{
+			this.tRot += ((float)Math.PI * 2F);
+		}
 
-        while (this.tRot < -(float)Math.PI)
-        {
-            this.tRot += ((float)Math.PI * 2F);
-        }
+		float f2 = this.tRot - this.bookRotation;
 
-        float f2;
+		while (f2 >= Math.PI)
+			f2 -= (Math.PI * 2F);
 
-        for (f2 = this.tRot - this.bookRotation; f2 >= (float)Math.PI; f2 -= ((float)Math.PI * 2F))
-        {
-            ;
-        }
+		while (f2 < -Math.PI)
+			f2 += (Math.PI * 2F);
 
-        while (f2 < -(float)Math.PI)
-        {
-            f2 += ((float)Math.PI * 2F);
-        }
-
-        this.bookRotation += f2 * 0.4F;
-        this.bookSpread = MathHelper.clamp(this.bookSpread, 0.0F, 1.0F);
-        ++this.tickCount;
-        this.pageFlipPrev = this.pageFlip;
-        float f = (this.flipT - this.pageFlip) * 0.4F;
-        float f3 = 0.2F;
-        f = MathHelper.clamp(f, -0.2F, 0.2F);
-        this.flipA += (f - this.flipA) * 0.9F;
-        this.pageFlip += this.flipA;
+		this.bookRotation += f2 * 0.4F;
+		this.bookSpread = MathHelper.clamp(this.bookSpread, 0.0F, 1.0F);
+		++this.tickCount;
+		this.pageFlipPrev = this.pageFlip;
+		float f = (this.flipT - this.pageFlip) * 0.4F;
+		f = MathHelper.clamp(f, -0.2F, 0.2F);
+		this.flipA += (f - this.flipA) * 0.9F;
+		this.pageFlip += this.flipA;
 	}
 
 	public void dropItem(int i) {
@@ -141,6 +129,7 @@ public abstract class TileMatrixEnchanterBase extends TileSimpleInventory implem
 			InventoryHelper.spawnItemStack(world, pos.getX(), pos.getY(), pos.getZ(), stack);
 	}
 
+	@Nonnull
 	@Override
 	public String getName() {
 		return hasCustomName() ? customName : "container.enchant";
@@ -155,11 +144,19 @@ public abstract class TileMatrixEnchanterBase extends TileSimpleInventory implem
 		customName = customNameIn;
 	}
 
+	@Nonnull
 	@Override
 	public ITextComponent getDisplayName() {
-		return hasCustomName() ? new TextComponentString(getName()) : new TextComponentTranslation(getName(), new Object[0]);
+		return hasCustomName() ? new TextComponentString(getName()) : new TextComponentTranslation(getName());
 	}
 
+	@Override
+	public void inventoryChanged(int i) {
+		super.inventoryChanged(i);
+		sync();
+	}
+	
+	@Nonnull
 	@Override
 	public String getGuiID() {
 		return "minecraft:enchanting_table";

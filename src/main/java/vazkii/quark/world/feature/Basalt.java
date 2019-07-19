@@ -13,42 +13,32 @@ package vazkii.quark.world.feature;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.BiomeDictionary;
-import net.minecraftforge.event.terraingen.OreGenEvent;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.oredict.OreDictionary;
 import vazkii.arl.block.BlockMod;
-import vazkii.arl.block.BlockModSlab;
 import vazkii.arl.block.BlockModStairs;
 import vazkii.arl.recipe.RecipeHandler;
 import vazkii.arl.util.ProxyRegistry;
-import vazkii.quark.base.handler.DimensionConfig;
+import vazkii.quark.base.block.BlockQuarkStairs;
+import vazkii.quark.base.handler.ModIntegrationHandler;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.GlobalConfig;
 import vazkii.quark.base.module.ModuleLoader;
 import vazkii.quark.building.feature.VanillaWalls;
 import vazkii.quark.world.block.BlockBasalt;
-import vazkii.quark.world.block.slab.BlockBasaltSlab;
-import vazkii.quark.world.block.stairs.BlockBasaltStairs;
+import vazkii.quark.world.block.slab.BlockBasicStoneSlab;
 import vazkii.quark.world.feature.RevampStoneGen.StoneInfo;
 import vazkii.quark.world.world.BasaltGenerator;
-import vazkii.quark.world.world.StoneInfoBasedGenerator;
 
 public class Basalt extends Feature {
 
 	public static BlockMod basalt;
 
-	StoneInfo basaltInfo;
-	
-	boolean enableStairsAndSlabs;
-	boolean enableWalls;
+	public static StoneInfo basaltInfo;
+
+	public static boolean enableStairsAndSlabs;
+	public static boolean enableWalls;
 
 	@Override
 	public void setupConfig() {
@@ -62,14 +52,10 @@ public class Basalt extends Feature {
 		basalt = new BlockBasalt();
 
 		if(enableStairsAndSlabs) {
-			BlockModSlab.initSlab(basalt, 0, new BlockBasaltSlab(false), new BlockBasaltSlab(true));
-			BlockModStairs.initStairs(basalt, 0, new BlockBasaltStairs());
+			BlockBasicStoneSlab.initSlab(basalt, 0, "stone_basalt_slab");
+			BlockModStairs.initStairs(basalt, 0, new BlockQuarkStairs("stone_basalt_stairs", basalt.getDefaultState()));
 		}
 		VanillaWalls.add("basalt", basalt, 0, enableWalls);
-
-		RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(basalt, 4, 1),
-				"BB", "BB",
-				'B', ProxyRegistry.newStack(basalt, 1, 0));
 		
 		GameRegistry.registerWorldGenerator(new BasaltGenerator(() -> basaltInfo), 0);
 		
@@ -78,18 +64,30 @@ public class Basalt extends Feature {
 	}
 	
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {
-		ItemStack blackItem = ProxyRegistry.newStack(Items.COAL); 
+	public void postPreInit() {
+		Object blackItem = ProxyRegistry.newStack(Items.COAL);
 		if(ModuleLoader.isFeatureEnabled(Biotite.class))
-			blackItem = ProxyRegistry.newStack(Biotite.biotite);
+			blackItem = "gemBiotite";
 
 		RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(basalt, 4, 0),
 				"BI", "IB",
-				'B', ProxyRegistry.newStack(Blocks.COBBLESTONE, 1, 0),
+				'B', "cobblestone",
 				'I', blackItem);
-		RecipeHandler.addShapelessOreDictRecipe(ProxyRegistry.newStack(Blocks.STONE, 1, 5), ProxyRegistry.newStack(basalt), ProxyRegistry.newStack(Items.QUARTZ));
+
+		RecipeHandler.addShapelessOreDictRecipe(ProxyRegistry.newStack(Blocks.STONE, 1, 5),
+				"stoneBasalt", "gemQuartz");
+
+		RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(basalt, 4, 1),
+				"BB", "BB",
+				'B', "stoneBasalt");
 	}
-	
+
+	@Override
+	public void init() {
+		ModIntegrationHandler.registerChiselVariant("basalt", new ItemStack(basalt, 1, 0));
+		ModIntegrationHandler.registerChiselVariant("basalt", new ItemStack(basalt, 1, 1));
+	}
+
 	@Override
 	public boolean requiresMinecraftRestartToEnable() {
 		return true;

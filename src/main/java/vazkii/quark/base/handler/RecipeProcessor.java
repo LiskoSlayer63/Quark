@@ -1,10 +1,5 @@
 package vazkii.quark.base.handler;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
@@ -17,10 +12,15 @@ import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import vazkii.arl.util.ProxyRegistry;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
 public class RecipeProcessor {
 
 	private static Function<ItemStack, Integer> compositeFunction = stack -> 0;
-	private static List<Consumer<IRecipe>> recipeConsumers = new ArrayList();
+	private static final List<Consumer<IRecipe>> recipeConsumers = new ArrayList<>();
 	
 	static { 
 		addConsumer(RecipeProcessor::executeWoodReplacementsOverRecipe);
@@ -48,7 +48,7 @@ public class RecipeProcessor {
 	}
 	
 	public static void runConsumers() {
-		List<ResourceLocation> recipeList = new ArrayList(CraftingManager.REGISTRY.getKeys());
+		List<ResourceLocation> recipeList = new ArrayList<>(CraftingManager.REGISTRY.getKeys());
 		for(ResourceLocation res : recipeList) {
 			IRecipe recipe = CraftingManager.REGISTRY.getObject(res);
 			for(Consumer<IRecipe> consumer : recipeConsumers)
@@ -64,8 +64,8 @@ public class RecipeProcessor {
 				ShapedRecipes shaped = (ShapedRecipes) recipe;
 				NonNullList<Ingredient> ingredients = shaped.recipeItems;
 				for(int i = 0; i < ingredients.size(); i++) {
-					Ingredient ingr = ingredients.get(i);
-					if(ingr.apply(ProxyRegistry.newStack(Blocks.PLANKS)))
+					Ingredient ingredient = ingredients.get(i);
+					if(ingredient.apply(ProxyRegistry.newStack(Blocks.PLANKS)))
 						ingredients.set(i, Ingredient.fromStacks(ProxyRegistry.newStack(Blocks.PLANKS, 1, 0)));
 				}
 				out.setCount(finalSize);

@@ -1,23 +1,6 @@
 package vazkii.quark.decoration.feature;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import javax.annotation.Nullable;
-
-import org.apache.commons.lang3.tuple.Pair;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockBush;
-import net.minecraft.block.BlockCrops;
-import net.minecraft.block.BlockDeadBush;
-import net.minecraft.block.BlockDoublePlant;
-import net.minecraft.block.BlockLilyPad;
-import net.minecraft.block.BlockMushroom;
-import net.minecraft.block.BlockSapling;
-import net.minecraft.block.BlockTallGrass;
+import net.minecraft.block.*;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.IBakedModel;
@@ -37,24 +20,30 @@ import net.minecraft.world.IBlockAccess;
 import net.minecraftforge.client.event.ModelBakeEvent;
 import net.minecraftforge.client.model.IModel;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
-import net.minecraftforge.fml.common.FMLLog;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.registry.GameRegistry;
+import org.apache.commons.lang3.tuple.Pair;
 import vazkii.arl.client.RetexturedModel;
 import vazkii.arl.recipe.RecipeHandler;
 import vazkii.arl.util.ProxyRegistry;
+import vazkii.quark.base.Quark;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.decoration.block.BlockColoredFlowerPot;
+
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ColoredFlowerPots extends Feature {
 
 	public static BlockColoredFlowerPot[] pots;
 	public static boolean enableComparatorLogic;
 	public static String[] overrides;
-	private static Map<Pair<Item,Integer>,Integer> flowers = new HashMap<>();
+	private static final Map<Pair<Item, Integer>, Integer> flowers = new HashMap<>();
 	private static boolean loadedConfig = false;
 
 	@Override
@@ -69,7 +58,7 @@ public class ColoredFlowerPots extends Feature {
 	@Override
 	public void setupConfig() {
 		enableComparatorLogic = loadPropBool("Comparator Logic", "If true, filled flower pots will respond to comparators based on the contents.", true);
-		overrides = loadPropStringList("Flower Overrides", "List of itemstacks to override default flower behavior, default checks for BlockBush.\n"
+		overrides = loadPropStringList("Flower Overrides", "List of stacks to override default flower behavior, default checks for BlockBush.\n"
 				+ "Format is 'modid:name[:meta]->power'. Unset meta will default wildcard. Power refers to comparator power, non-zero makes it valid for a flower pot. Specific values:\n"
 				+ "* 0 - not flower, blacklists from placing in a flower pot\n* 1 - mushroom\n* 4 - fern\n* 7 - flower\n* 10 - dead bush\n* 12 - sapling\n* 15 - cactus", new String[] {
 				"biomesoplenty:mushroom->1",
@@ -78,12 +67,14 @@ public class ColoredFlowerPots extends Feature {
 				"biomesoplenty:sapling_0->12",
 				"biomesoplenty:sapling_1->12",
 				"biomesoplenty:sapling_2->12",
-				"quark:glowshroom->1" // does not extend BlockMushroom, so comparator power is guessed wrongly
+				"quark:glowshroom->1", // does not extend BlockMushroom, so comparator power is guessed wrongly
+				"botania:specialflower->0",
+				"botania:floatingspecialflower->0"
 		});
 	}
 
 	@Override
-	public void init(FMLInitializationEvent event) {
+	public void init() {
 		loadFlowersFromConfig();
 	}
 
@@ -105,13 +96,13 @@ public class ColoredFlowerPots extends Feature {
 		for(String line : overrides) {
 			String[] split = line.split("->");
 			if(split.length != 2) {
-				FMLLog.log.error("Invalid Quark flower pot override, expected format 'modid:name[:meta]->power'");
+				Quark.LOG.error("Invalid Quark flower pot override, expected format 'modid:name[:meta]->power'");
 				continue;
 			}
 
 			String[] itemData = split[0].split(":");
 			if(itemData.length < 2 || itemData.length > 3) {
-				FMLLog.log.error("Invalid Quark flower pot override, expected format 'modid:name[:meta]->power'");
+				Quark.LOG.error("Invalid Quark flower pot override, expected format 'modid:name[:meta]->power'");
 				continue;
 			}
 
@@ -123,7 +114,7 @@ public class ColoredFlowerPots extends Feature {
 				power = -1;
 			}
 			if(power < 0 || power > 15) {
-				FMLLog.log.error("Invalid Quark flower pot override, power must be a valid number from 0 to 15");
+				Quark.LOG.error("Invalid Quark flower pot override, power must be a valid number from 0 to 15");
 				continue;
 			}
 
@@ -131,7 +122,7 @@ public class ColoredFlowerPots extends Feature {
 			ResourceLocation location = new ResourceLocation(itemData[0], itemData[1]);
 			Item item = GameRegistry.findRegistry(Item.class).getValue(location);
 			if(item == null || item == Items.AIR) {
-				FMLLog.log.debug("Unable to find item {} for Quark flower override", location.toString());
+				Quark.LOG.debug("Unable to find item {} for Quark flower override", location.toString());
 				continue;
 			}
 
@@ -144,7 +135,7 @@ public class ColoredFlowerPots extends Feature {
 					meta = -1;
 				}
 				if(meta < 0) {
-					FMLLog.log.error("Invalid Quark flower pot override, meta must be a valid positive number");
+					Quark.LOG.error("Invalid Quark flower pot override, meta must be a valid positive number");
 					continue;
 				}
 				registerFlower(new ItemStack(item, 1, meta), power);
@@ -173,7 +164,7 @@ public class ColoredFlowerPots extends Feature {
 			Block block = Block.getBlockFromItem(key.getLeft());
 
 			// not a flower means 0 override
-			// this handles vanilla logic excluding cactuses and ferns, which are registered directly above
+			// this handles vanilla logic excluding cacti and ferns, which are registered directly above
 			if(!(block instanceof BlockBush)
 					|| block instanceof BlockDoublePlant
 					|| block instanceof BlockTallGrass
@@ -201,20 +192,20 @@ public class ColoredFlowerPots extends Feature {
 
 	/**
 	 * Registers an override to state a stack is definitely a flower or not a flower, primarily used by the config
-	 * @param stack     ItemStack which is a flower
-	 * @param power     Comparator level. Set to 0 to register this as not a flower
+	 * @param stack	 ItemStack which is a flower
+	 * @param power	 Comparator level. Set to 0 to register this as not a flower
 	 */
 	public static void registerFlower(ItemStack stack, int power) {
 		flowers.put(Pair.of(stack.getItem(), stack.getMetadata()), power);
 	}
 	/** Any items which have blockColors methods that throw an exception */
-	private static Set<Item> unsafeBlockColors = new HashSet<>();
+	private static final Set<Item> unsafeBlockColors = new HashSet<>();
 
 	/**
-	 * Gets the block colors for a block from an itemstack, logging an exception if it fails. Use this to get block colors when the implementation is unknown
+	 * Gets the block colors for a block from a stack, logging an exception if it fails. Use this to get block colors when the implementation is unknown
 	 * @param stack  Stack to use
 	 * @param world  World
-	 * @param pos    Pos
+	 * @param pos	Pos
 	 * @param index  Tint index
 	 * @return  color, or -1 for undefined
 	 */
@@ -243,7 +234,7 @@ public class ColoredFlowerPots extends Feature {
 	 * Gets the block colors from an item stack
 	 * @param stack  Stack to check
 	 * @param world  World
-	 * @param pos    Pos
+	 * @param pos	Pos
 	 * @param index  Tint index
 	 * @return  color, or -1 for undefined
 	 */
@@ -268,11 +259,14 @@ public class ColoredFlowerPots extends Feature {
 	@SubscribeEvent
 	public void onModelBake(ModelBakeEvent event) {
 		for(EnumDyeColor color : EnumDyeColor.values()) {
-			ModelResourceLocation location = new ModelResourceLocation(pots[color.getMetadata()].getRegistryName(), "contents=custom");
-			IModel model = ModelLoaderRegistry.getModelOrLogError(location, "Error loading model for " + location);
-			IBakedModel standard = event.getModelRegistry().getObject(location);
-			IBakedModel finalModel = new RetexturedModel(standard, model, DefaultVertexFormats.BLOCK, "plant");
-			event.getModelRegistry().putObject(location, finalModel);
+			ResourceLocation loc = pots[color.getMetadata()].getRegistryName();
+			if (loc != null) {
+				ModelResourceLocation location = new ModelResourceLocation(loc, "contents=custom");
+				IModel model = ModelLoaderRegistry.getModelOrLogError(location, "Error loading model for " + location);
+				IBakedModel standard = event.getModelRegistry().getObject(location);
+				IBakedModel finalModel = new RetexturedModel(standard, model, DefaultVertexFormats.BLOCK, "plant");
+				event.getModelRegistry().putObject(location, finalModel);
+			}
 		}
 	}
 }

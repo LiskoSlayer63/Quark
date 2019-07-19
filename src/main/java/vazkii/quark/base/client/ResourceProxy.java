@@ -1,17 +1,16 @@
-package vazkii.quark.base.client;	
+package vazkii.quark.base.client;
 
-import java.io.IOException;
+import com.google.common.collect.ImmutableSet;
+import net.minecraft.client.resources.AbstractResourcePack;
+import vazkii.quark.base.Quark;
+import vazkii.quark.base.lib.LibMisc;
+
+import javax.annotation.Nonnull;
+import java.io.File;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
-
-import net.minecraft.client.resources.AbstractResourcePack;
-import net.minecraftforge.fml.common.Loader;
-import vazkii.quark.base.Quark;
-import vazkii.quark.base.lib.LibMisc;
 
 public class ResourceProxy extends AbstractResourcePack {
 
@@ -21,10 +20,10 @@ public class ResourceProxy extends AbstractResourcePack {
 	private static final String BARE_FORMAT = "assets/" + MINECRAFT + "/%s/%s";
 	private static final String OVERRIDE_FORMAT = "/assets/" + LibMisc.MOD_ID + "/%s/overrides/%s";
 
-	private static final Map<String, String> overrides = new HashMap();
+	private static final Map<String, String> overrides = new HashMap<>();
 
-	public ResourceProxy() {
-		super(Loader.instance().activeModContainer().getSource());
+	public ResourceProxy(File file) {
+		super(file);
 		overrides.put("pack.mcmeta", "/proxypack.mcmeta");
 	}
 
@@ -34,30 +33,29 @@ public class ResourceProxy extends AbstractResourcePack {
 		overrides.put(bare, override);
 	}
 
+	@Nonnull
 	@Override
 	public Set<String> getResourceDomains() {
 		return RESOURCE_DOMAINS;
 	}
 
+	@Nonnull
 	@Override
-	protected InputStream getInputStreamByName(String name) throws IOException {
-		if(name == null)
-			return null;
-		
-		String file = overrides.get(name);
+	protected InputStream getInputStreamByName(@Nonnull String name) {
 		return Quark.class.getResourceAsStream(overrides.get(name));
 	}
 
 	@Override
-	protected boolean hasResourceName(String name) {
+	protected boolean hasResourceName(@Nonnull String name) {
 		return overrides.containsKey(name);
 	}
 
 	@Override
-	protected void logNameNotLowercase(String name) {
+	protected void logNameNotLowercase(@Nonnull String name) {
 		// NO-OP
 	}
 
+	@Nonnull
 	@Override
 	public String getPackName() {
 		return "quark-texture-proxy";

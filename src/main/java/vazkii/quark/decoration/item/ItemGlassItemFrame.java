@@ -16,6 +16,8 @@ import vazkii.quark.base.module.ModuleLoader;
 import vazkii.quark.decoration.entity.EntityGlassItemFrame;
 import vazkii.quark.decoration.feature.FlatItemFrames;
 
+import javax.annotation.Nonnull;
+
 public class ItemGlassItemFrame extends ItemMod implements IQuarkItem, IExtraVariantHolder {
 
 	private static final String[] EXTRA_VARIANTS = {
@@ -27,6 +29,7 @@ public class ItemGlassItemFrame extends ItemMod implements IQuarkItem, IExtraVar
 		setCreativeTab(CreativeTabs.DECORATIONS);
 	}
 
+	@Nonnull
 	@Override
 	public EnumActionResult onItemUse(EntityPlayer playerIn, World worldIn, BlockPos pos, EnumHand hand, EnumFacing facing, float hitX, float hitY, float hitZ) {
 		ItemStack stack = playerIn.getHeldItem(hand);
@@ -35,14 +38,7 @@ public class ItemGlassItemFrame extends ItemMod implements IQuarkItem, IExtraVar
 		if((ModuleLoader.isFeatureEnabled(FlatItemFrames.class) || facing.getAxis() != EnumFacing.Axis.Y) && playerIn.canPlayerEdit(blockpos, facing, stack)) {
 			EntityHanging entityhanging = createEntity(worldIn, blockpos, facing);
 
-			if(entityhanging != null && entityhanging.onValidSurface()) {
-				if(!worldIn.isRemote) {
-					entityhanging.playPlaceSound();
-					worldIn.spawnEntity(entityhanging);
-				}
-
-				stack.shrink(1);
-			}
+			ItemColoredItemFrame.placeHangingEntity(worldIn, stack, entityhanging);
 
 			return EnumActionResult.SUCCESS;
 		}

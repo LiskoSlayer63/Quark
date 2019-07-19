@@ -28,16 +28,21 @@ import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemCompass;
+import net.minecraft.item.ItemMap;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumFacing.Axis;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.storage.MapData;
+import net.minecraftforge.client.event.RenderItemInFrameEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.client.registry.IRenderFactory;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.quark.decoration.entity.EntityFlatItemFrame;
+
+import javax.annotation.Nonnull;
 
 // Basically a copy of RenderItemFrame
 @SideOnly(Side.CLIENT)
@@ -47,9 +52,9 @@ public class RenderFlatItemFrame extends RenderItemFrame {
 	private final ModelResourceLocation itemFrameModel = new ModelResourceLocation("item_frame", "normal");
 	private final ModelResourceLocation mapModel = new ModelResourceLocation("item_frame", "map");
 
-	public static final IRenderFactory FACTORY = (RenderManager manager) -> new RenderFlatItemFrame(manager);
+	public static final IRenderFactory<EntityItemFrame> FACTORY = RenderFlatItemFrame::new;
 
-	protected RenderItem itemRenderer;
+	protected final RenderItem itemRenderer;
 
 	public RenderFlatItemFrame(RenderManager renderManagerIn) {
 		super(renderManagerIn, Minecraft.getMinecraft().getRenderItem());
@@ -93,15 +98,18 @@ public class RenderFlatItemFrame extends RenderItemFrame {
 		GlStateManager.rotate(flipItem ? -180.0F : 0.0F, 0.0F, 1.0F, 0.0F);
 		renderItem(entity);
 		GlStateManager.popMatrix();
-		renderName(entity, x + entity.facingDirection.getFrontOffsetX() * 0.3F, y - (entityFlat.realFacingDirection == EnumFacing.DOWN ? 0.75D : 0.25D), z + entity.facingDirection.getFrontOffsetZ() * 0.3F);
+		EnumFacing facing = entity.facingDirection;
+		if (facing == null) facing = EnumFacing.UP;
+		renderName(entity, x + facing.getXOffset() * 0.3F, y - (entityFlat.realFacingDirection == EnumFacing.DOWN ? 0.75D : 0.25D), z + facing.getZOffset() * 0.3F);
 	}
 
 	protected void renderModel(EntityFlatItemFrame entity, Minecraft mc) {
 		IBakedModel ibakedmodel;
 		BlockRendererDispatcher blockrendererdispatcher = mc.getBlockRendererDispatcher();
 		ModelManager modelmanager = blockrendererdispatcher.getBlockModelShapes().getModelManager();
+		ItemStack displayStack = entity.getDisplayedItem();
 
-		if(!entity.getDisplayedItem().isEmpty() && entity.getDisplayedItem().getItem() == Items.FILLED_MAP) {
+		if(!displayStack.isEmpty() && displayStack.getItem() instanceof ItemMap && Items.FILLED_MAP.getMapData(displayStack, mc.world) != null) {
 			ibakedmodel = modelmanager.getModel(mapModel);
 		} else {
 			ibakedmodel = modelmanager.getModel(itemFrameModel);
@@ -127,14 +135,14 @@ public class RenderFlatItemFrame extends RenderItemFrame {
 			GlStateManager.disableLighting();
 			int i = itemFrame.getRotation();
 
-			if(item instanceof net.minecraft.item.ItemMap)
+			if(item instanceof ItemMap)
 				i = i % 4 * 2;
 
 			GlStateManager.rotate(i * 360.0F / 8.0F, 0.0F, 0.0F, 1.0F);
 
-			net.minecraftforge.client.event.RenderItemInFrameEvent event = new net.minecraftforge.client.event.RenderItemInFrameEvent(itemFrame, this);
-			if (!net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event)) {
-				if(item instanceof net.minecraft.item.ItemMap) {
+			RenderItemInFrameEvent event = new RenderItemInFrameEvent(itemFrame, this);
+			if (!MinecraftForge.EVENT_BUS.post(event)) {
+				if(item instanceof ItemMap) {
 					renderManager.renderEngine.bindTexture(MAP_BACKGROUND_TEXTURES);
 					GlStateManager.rotate(180.0F, 0.0F, 0.0F, 1.0F);
 					float f = 0.0078125F;
@@ -173,7 +181,7 @@ public class RenderFlatItemFrame extends RenderItemFrame {
 	}
 
 	@Override
-	protected void renderName(EntityItemFrame entity, double x, double y, double z) {
+	protected void renderName(@Nonnull EntityItemFrame entity, double x, double y, double z) {
 		if(Minecraft.isGuiEnabled() && !entity.getDisplayedItem().isEmpty() && entity.getDisplayedItem().hasDisplayName() && renderManager.pointedEntity == entity) {
 			double d0 = entity.getDistanceSq(renderManager.renderViewEntity);
 			float f = entity.isSneaking() ? 32.0F : 64.0F;

@@ -1,13 +1,6 @@
 package vazkii.quark.client.feature;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
-
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
-
+import com.google.common.collect.Lists;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
@@ -16,6 +9,7 @@ import net.minecraft.client.gui.inventory.GuiChest;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiShulkerBox;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -33,32 +27,44 @@ import net.minecraft.potion.PotionUtils;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.translation.I18n;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderTooltipEvent;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.ModContainer;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import vazkii.arl.util.ItemNBTHelper;
-import vazkii.quark.api.ICustomSearchHandler;
 import vazkii.quark.api.ICustomSearchHandler.StringMatcher;
 import vazkii.quark.api.IItemSearchBar;
+import vazkii.quark.api.capability.ISearchHandler;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.management.feature.FavoriteItems;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.regex.Pattern;
+
 public class ChestSearchBar extends Feature {
 
 	public static String text = "";
-	GuiTextField searchBar;
-	boolean skip;
-	boolean moveToCenterBar;
+	public static GuiTextField searchBar;
+	public static boolean skip;
+	public static boolean moveToCenterBar;
 	
 	private long lastClick;
 	private int matched;
+
+	public static List<String> classnames;
 	
 	@Override
 	public void setupConfig() {
+		String[] classnamesArr = loadPropStringList("Forced GUIs", "GUIs in which the sort button should be forced to show up. Use the \"Debug Classnames\" option in chest buttons to find the names.", new String[0]);
+		classnames = Lists.newArrayList(classnamesArr);
+
 		boolean invtweaks = loadPropBool("Avoid Invtweaks Buttons", "Automatically move the search bar if Inventory Tweaks is loaded so it doesn't end up in the same place as their buttons.", true);
 		moveToCenterBar = loadPropBool("Move to Center Bar", "Set to true to move to the center bar, next to the \"Inventory\" text.", false);
 		moveToCenterBar |= (invtweaks && Loader.isModLoaded("inventorytweaks"));
@@ -67,8 +73,8 @@ public class ChestSearchBar extends Feature {
 	@SubscribeEvent
 	public void initGui(GuiScreenEvent.InitGuiEvent.Post event) {
 		GuiScreen gui = event.getGui();
-		boolean callback = gui instanceof IItemSearchBar;
-		if(callback || gui instanceof GuiChest || gui instanceof GuiShulkerBox) {
+		if(gui instanceof IItemSearchBar || classnames.contains(gui.getClass().getName()) ||
+				gui instanceof GuiChest || gui instanceof GuiShulkerBox) {
 			GuiContainer chest = (GuiContainer) gui;
 			searchBar = new GuiTextField(12831, gui.mc.fontRenderer, chest.getGuiLeft() + 81, chest.getGuiTop() + 6, 88, 10);
 			if(moveToCenterBar)
@@ -79,7 +85,7 @@ public class ChestSearchBar extends Feature {
 			searchBar.setMaxStringLength(32);
 			searchBar.setEnableBackgroundDrawing(false);
 			
-			if(callback)
+			if(gui instanceof IItemSearchBar)
 				((IItemSearchBar) gui).onSearchBarAdded(searchBar);
 		} else searchBar = null;
 	}
@@ -87,9 +93,9 @@ public class ChestSearchBar extends Feature {
 	@SubscribeEvent
 	public void onKeypress(GuiScreenEvent.KeyboardInputEvent.Pre event) {
 		if(searchBar != null && searchBar.isFocused() && Keyboard.getEventKeyState()) {
-	        char eventChar = Keyboard.getEventCharacter();
-	        int eventCode = Keyboard.getEventKey();
-	        
+			char eventChar = Keyboard.getEventCharacter();
+			int eventCode = Keyboard.getEventKey();
+
 			searchBar.textboxKeyTyped(eventChar, eventCode);
 			text = searchBar.getText();
 			
@@ -98,13 +104,13 @@ public class ChestSearchBar extends Feature {
 	}
 	
 	@SubscribeEvent
-	public void onMouseclick(GuiScreenEvent.MouseInputEvent.Pre event) {
+	public void onClick(GuiScreenEvent.MouseInputEvent.Pre event) {
 		if(searchBar != null && Mouse.getEventButtonState()) {
 			Minecraft mc = Minecraft.getMinecraft();
 			GuiScreen gui = event.getGui();
 			
-	        int x = Mouse.getEventX() * gui.width / mc.displayWidth;
-	        int y = gui.height - Mouse.getEventY() * gui.height / mc.displayHeight - 1;
+			int x = Mouse.getEventX() * gui.width / mc.displayWidth;
+			int y = gui.height - Mouse.getEventY() * gui.height / mc.displayHeight - 1;
 			int button = Mouse.getEventButton();
 			
 			searchBar.mouseClicked(x, y, button);
@@ -154,7 +160,7 @@ public class ChestSearchBar extends Feature {
 						int y = guiTop + s.yPos;
 						
 						GlStateManager.disableDepth();
-						guiContainer.drawRect(x, y, x + 16, y + 16, 0xAA000000);
+						Gui.drawRect(x, y, x + 16, y + 16, 0xAA000000);
 					} else matched++;
 				}
 			}
@@ -178,7 +184,7 @@ public class ChestSearchBar extends Feature {
 	
 	public static boolean namesMatch(ItemStack stack, String search) {
 		search = TextFormatting.getTextWithoutFormattingCodes(search.trim().toLowerCase());
-		if(search.isEmpty())
+		if(search == null || search.isEmpty())
 			return true;
 		
 		if(stack.isEmpty())
@@ -188,7 +194,7 @@ public class ChestSearchBar extends Feature {
 		if(item instanceof ItemShulkerBox) {
 			NBTTagCompound cmp = ItemNBTHelper.getCompound(stack, "BlockEntityTag", true);
 			if(cmp != null && cmp.hasKey("Items", 9)) {
-				NonNullList<ItemStack> itemList = NonNullList.<ItemStack>withSize(27, ItemStack.EMPTY);
+				NonNullList<ItemStack> itemList = NonNullList.withSize(27, ItemStack.EMPTY);
 				ItemStackHelper.loadAllItems(cmp, itemList);
 				
 				for(ItemStack innerStack : itemList)
@@ -200,11 +206,11 @@ public class ChestSearchBar extends Feature {
 		String name = stack.getDisplayName();
 		name = TextFormatting.getTextWithoutFormattingCodes(name.trim().toLowerCase());
 		
-		StringMatcher matcher = (s1, s2) -> s1.contains(s2);
+		StringMatcher matcher = String::contains;
 		
 		if(search.length() >= 3 && search.startsWith("\"") && search.endsWith("\"")) {
 			search = search.substring(1, search.length() - 1);
-			matcher = (s1, s2) -> s1.equals(s2);
+			matcher = String::equals;
 		}
 		
 		if(search.length() >= 3 && search.startsWith("/") && search.endsWith("/")) {
@@ -215,11 +221,11 @@ public class ChestSearchBar extends Feature {
 		if(stack.isItemEnchanted()) {
 			Map<Enchantment, Integer> enchants = EnchantmentHelper.getEnchantments(stack);
 			for(Enchantment e : enchants.keySet())
-				if(matcher.matches(e.getTranslatedName(enchants.get(e)).toLowerCase(), search))
+				if(e != null && matcher.matches(e.getTranslatedName(enchants.get(e)).toLowerCase(), search))
 					return true;
 		}
 		
-		List<String> potionNames = new ArrayList();
+		List<String> potionNames = new ArrayList<>();
 		PotionUtils.addPotionTooltip(stack, potionNames, 1F);
 		for(String s : potionNames)
 			if(matcher.matches(TextFormatting.getTextWithoutFormattingCodes(s.trim().toLowerCase()), search))
@@ -238,21 +244,21 @@ public class ChestSearchBar extends Feature {
 		}
 		
 		CreativeTabs tab = item.getCreativeTab();
-		if(tab != null && matcher.matches(I18n.translateToLocal(tab.getTranslatedTabLabel()).toLowerCase(), search))
+		if(tab != null && matcher.matches(I18n.format(tab.getTranslationKey()).toLowerCase(), search))
 			return true;
 		
 		if(search.matches("favou?rites?") && FavoriteItems.isItemFavorited(stack))
 			return true;
 		
 		ResourceLocation itemName = Item.REGISTRY.getNameForObject(item);
-		ModContainer mod = Loader.instance().getIndexedModList().get(itemName.getResourceDomain());
+		ModContainer mod = Loader.instance().getIndexedModList().get(Objects.requireNonNull(itemName).getNamespace());
 		if(matcher.matches(mod.getName().toLowerCase(), search))
 			return true;
 		
 		if(matcher.matches(name, search))
 			return true;
 		
-		return item instanceof ICustomSearchHandler && ((ICustomSearchHandler) item).stackMatchesSearchQuery(stack, search, matcher, ChestSearchBar::namesMatch);
+		return ISearchHandler.hasHandler(stack) && ISearchHandler.getHandler(stack).stackMatchesSearchQuery(search, matcher, ChestSearchBar::namesMatch);
 	}
 	
 	@Override

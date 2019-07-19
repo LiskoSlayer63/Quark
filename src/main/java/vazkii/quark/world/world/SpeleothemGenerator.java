@@ -1,7 +1,5 @@
 package vazkii.quark.world.world;
 
-import java.util.Random;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockStone;
 import net.minecraft.block.state.IBlockState;
@@ -17,6 +15,8 @@ import vazkii.quark.world.block.BlockSpeleothem.EnumSize;
 import vazkii.quark.world.feature.Basalt;
 import vazkii.quark.world.feature.RevampStoneGen;
 import vazkii.quark.world.feature.Speleothems;
+
+import java.util.Random;
 
 public class SpeleothemGenerator implements IWorldGenerator {
 
@@ -55,7 +55,7 @@ public class SpeleothemGenerator implements IWorldGenerator {
 			return false;
 		
 		for(int i = 0; i < tries; i++) {
-			BlockPos target = pos.add(random.nextInt(spread * 2 + 1) - spread, random.nextInt(spread + 1) - spread / 1, random.nextInt(spread * 2 + 1) - spread);
+			BlockPos target = pos.add(random.nextInt(spread * 2 + 1) - spread, random.nextInt(spread + 1) - spread, random.nextInt(spread * 2 + 1) - spread);
 			findAndPlaceSpeleothem(random, world, target);
 		}
 		
@@ -73,12 +73,12 @@ public class SpeleothemGenerator implements IWorldGenerator {
 		if(!up && world.canBlockSeeSky(pos))
  			return false;
 		
-		IBlockState stateAt = null;
+		IBlockState stateAt;
 		do {
 			pos = pos.offset(diff);
 			stateAt = world.getBlockState(pos);
 			off++;
-		} while(pos.getY() > 4 && pos.getY() < 200 && !stateAt.getBlock().isFullBlock(stateAt) && off < 10);
+		} while(pos.getY() > 4 && pos.getY() < 200 && !stateAt.isFullBlock() && off < 10);
 		
 		Block type = getSpeleothemType(stateAt);
 		placeSpeleothem(random, world, pos, type, !up);
@@ -129,6 +129,10 @@ public class SpeleothemGenerator implements IWorldGenerator {
 			return Speleothems.marble_speleothem;
 		else if(block == RevampStoneGen.limestone)
 			return Speleothems.limestone_speleothem;
+		else if(block == RevampStoneGen.jasper)
+			return Speleothems.jasper_speleothem;
+		else if(block == RevampStoneGen.slate)
+			return Speleothems.slate_speleothem;
 		
 		return null;
 	}

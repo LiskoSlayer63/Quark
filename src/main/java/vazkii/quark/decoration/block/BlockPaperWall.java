@@ -19,6 +19,8 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IBlockAccess;
 import vazkii.quark.base.block.BlockQuarkPane;
 
+import javax.annotation.Nonnull;
+
 public class BlockPaperWall extends BlockQuarkPane {
 
 	public BlockPaperWall(String name) {
@@ -26,16 +28,21 @@ public class BlockPaperWall extends BlockQuarkPane {
 		setHardness(1.5F);
 		setSoundType(SoundType.WOOD);
 		setCreativeTab(CreativeTabs.DECORATIONS);
+		setHarvestLevel("axe", 0);
 	}
 
 	@Override
-	public boolean canPlaceTorchOnTop(IBlockState state, IBlockAccess world, BlockPos pos) {
-		return !state.getValue(NORTH) && !state.getValue(SOUTH) && !state.getValue(EAST) && !state.getValue(WEST);
-	}
-	
-	@Override
-	public boolean canPaneConnectTo(IBlockAccess world, BlockPos pos, EnumFacing dir) {
-		return super.canPaneConnectTo(world, pos, dir) || world.getBlockState(pos.offset(dir)).getBlock() instanceof BlockPaperWall;
+	public int getFlammability(IBlockAccess world, BlockPos pos, EnumFacing face) {
+		return 30;
 	}
 
+	@Override
+	public int getFireSpreadSpeed(IBlockAccess world, BlockPos pos, EnumFacing face) {
+		return 60;
+	}
+
+	@Override
+	public boolean canPlaceTorchOnTop(@Nonnull IBlockState state, @Nonnull IBlockAccess world, @Nonnull BlockPos pos) {
+		return true;
+	}
 }

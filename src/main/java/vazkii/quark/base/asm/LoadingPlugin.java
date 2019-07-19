@@ -10,10 +10,14 @@
  */
 package vazkii.quark.base.asm;
 
-import java.util.Map;
-
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 
+import java.util.Map;
+
+@IFMLLoadingPlugin.MCVersion("1.12.2")
+@IFMLLoadingPlugin.Name("Quark Plugin")
+@IFMLLoadingPlugin.TransformerExclusions("vazkii.quark.base.asm")
+@IFMLLoadingPlugin.SortingIndex(1001) // After runtime deobfuscation
 public class LoadingPlugin implements IFMLLoadingPlugin {
 
 	public static boolean runtimeDeobfEnabled = false;

@@ -11,11 +11,13 @@ import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
+import vazkii.quark.base.module.ConfigHelper;
 import vazkii.quark.base.module.ModuleLoader;
+import vazkii.quark.world.feature.UndergroundBiomes;
 
 public class UndergroundBiomeSpiderNest extends BasicUndergroundBiome {
 
-	int floorCobwebChance, ceilingCobwebChance, caveSpiderSpawnerChance, nestCobwebChance, nestCobwebRange;
+	public static double floorCobwebChance, ceilingCobwebChance, caveSpiderSpawnerChance, nestCobwebChance, nestCobwebRange, cobbedstoneChance;
 	
 	public UndergroundBiomeSpiderNest() {
 		super(Blocks.COBBLESTONE.getDefaultState(), Blocks.COBBLESTONE.getDefaultState(), Blocks.COBBLESTONE.getDefaultState());
@@ -27,17 +29,27 @@ public class UndergroundBiomeSpiderNest extends BasicUndergroundBiome {
 		placeCobweb(world, pos, EnumFacing.DOWN, ceilingCobwebChance);
 	}
 	
-	@Override
-	public void fillFloor(World world, BlockPos pos, IBlockState state) {
-		super.fillFloor(world, pos, state);
-		placeCobweb(world, pos, EnumFacing.UP, floorCobwebChance);
-	}
-	
-	private void placeCobweb(World world, BlockPos pos, EnumFacing off, int chance) {
-		if(chance > 0 && world.rand.nextInt(chance) == 0) {
+	private void placeCobweb(World world, BlockPos pos, EnumFacing off, double chance) {
+		if(world.rand.nextDouble() < chance) {
 			BlockPos placePos = off == null ? pos : pos.offset(off);
 			world.setBlockState(placePos, Blocks.WEB.getDefaultState());
 		}
+	}
+	
+	@Override
+	public void fillWall(World world, BlockPos pos, IBlockState state) {
+		if(UndergroundBiomes.cobbedstoneEnabled && world.rand.nextDouble() < cobbedstoneChance)
+			world.setBlockState(pos, UndergroundBiomes.cobbedstoneState, 2);
+		else super.fillWall(world, pos, state);
+	}
+	
+	@Override
+	public void fillFloor(World world, BlockPos pos, IBlockState state) {
+		if(UndergroundBiomes.cobbedstoneEnabled && world.rand.nextDouble() < cobbedstoneChance)
+			world.setBlockState(pos, UndergroundBiomes.cobbedstoneState, 2);
+		else super.fillFloor(world, pos, state);
+		
+		placeCobweb(world, pos, EnumFacing.UP, floorCobwebChance);
 	}
 	
 	@Override
@@ -51,9 +63,11 @@ public class UndergroundBiomeSpiderNest extends BasicUndergroundBiome {
 		world.setBlockState(spawnerPos, Blocks.MOB_SPAWNER.getDefaultState());
 		
 		Class<? extends Entity> e = EntitySpider.class;
-		if(caveSpiderSpawnerChance > 0 && world.rand.nextInt(caveSpiderSpawnerChance) == 0)
+		if(world.rand.nextDouble() < caveSpiderSpawnerChance)
 			e = EntityCaveSpider.class;
-		((TileEntityMobSpawner) world.getTileEntity(spawnerPos)).getSpawnerBaseLogic().setEntityId(EntityList.getKey(e));
+		TileEntityMobSpawner spawner = (TileEntityMobSpawner) world.getTileEntity(spawnerPos);
+		if (spawner != null)
+		spawner.getSpawnerBaseLogic().setEntityId(EntityList.getKey(e));
 		
 		int range = 3;
 		for(int x = -range; x < range + 1; x++)
@@ -68,11 +82,12 @@ public class UndergroundBiomeSpiderNest extends BasicUndergroundBiome {
 	
 	@Override
 	public void setupConfig(String category) {
-		floorCobwebChance = ModuleLoader.config.getInt("Floor Cobweb Chance", category, 30, 0, Integer.MAX_VALUE, "The higher, the less floor cobwebs will spawn");
-		ceilingCobwebChance = ModuleLoader.config.getInt("Ceiling Cobweb Chance", category, 10, 0, Integer.MAX_VALUE, "The higher, the less ceiling cobwebs will spawn");
-		caveSpiderSpawnerChance = ModuleLoader.config.getInt("Cave Spider Spawner Chance", category, 4, 0, Integer.MAX_VALUE, "The (1 in X) chance for a spider spawner to be a cave spider spawner instead");
-		nestCobwebChance = ModuleLoader.config.getInt("Nest Cobweb Chance", category, 2, 0, Integer.MAX_VALUE, "The higher, the less cobwebs will spawn in nests");
+		floorCobwebChance = ConfigHelper.loadLegacyPropChance("Floor Cobweb Percentage Chance", category, "Floor Cobweb Chance", "The chance cobwebs will spawn", 0.033);
+		ceilingCobwebChance = ConfigHelper.loadLegacyPropChance("Ceiling Cobweb Percentage Chance", category, "Ceiling Cobweb Chance", "The chance ceiling cobwebs will spawn", 0.1);
+		caveSpiderSpawnerChance = ConfigHelper.loadLegacyPropChance("Cave Spider Spawner Percentage Chance", category, "Cave Spider Spawner Chance", "The chance for a spider spawner to be a cave spider spawner instead", 0.25);
+		nestCobwebChance = ConfigHelper.loadLegacyPropChance("Nest Cobweb Percentage Chance", category, "Nest Cobweb Chance", "The chance cobwebs will spawn in nests", 0.5);
 		nestCobwebRange = ModuleLoader.config.getInt("Nest Cobweb Range", category, 3, 0, Integer.MAX_VALUE, "The range for cobwebs to be spawned in spider nests");
+		cobbedstoneChance = ConfigHelper.loadPropChance("Cobbedstone Chance", category, "The chance for cobbedstone to replace cobblestone in the floor and walls", 0.3);
 	}
 
 }

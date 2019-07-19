@@ -1,8 +1,5 @@
 package vazkii.quark.management.feature;
 
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.GL11;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
@@ -14,14 +11,14 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
 import vazkii.arl.network.NetworkHandler;
 import vazkii.quark.base.client.ModKeybinds;
 import vazkii.quark.base.module.Feature;
@@ -39,15 +36,15 @@ public class ChangeHotbarKeybind extends Feature {
 	private static final int MAX_HEIGHT = 90;
 	private static final int ANIM_PER_TICK = MAX_HEIGHT / ANIMATION_TIME;
 
-	int height = 0;
-	int currentHeldItem;
-	boolean animating;
-	boolean keyDown;
-	boolean hotbarChangeOpen, shifting;
+	public static int height = 0;
+	public static int currentHeldItem;
+	public static boolean animating;
+	public static boolean keyDown;
+	public static boolean hotbarChangeOpen, shifting;
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		ModKeybinds.initChangeHotbarKey();
 	}
 
@@ -99,7 +96,7 @@ public class ChangeHotbarKeybind extends Feature {
 		if(event.getType() == ElementType.HOTBAR) {
 			ScaledResolution res = event.getResolution();
 			float realHeight = getRealHeight(event.getPartialTicks());
-			float xStart = res.getScaledWidth() / 2 - 91;
+			float xStart = res.getScaledWidth() / 2f - 91;
 			float yStart = res.getScaledHeight() - realHeight;
 
 			RenderItem render = mc.getRenderItem();

@@ -18,15 +18,17 @@ public class Pipes extends Feature {
 	
 	public static int pipeSpeed;
 	public static int maxPipeItems;
-	int pipesCrafted;
-	boolean enableRender;
+	public static int pipesCrafted;
+	public static boolean enableRender;
+	public static boolean doPipesWhoosh;
 	
 	@Override
 	public void setupConfig() {
 		pipeSpeed = loadPropInt("Pipe Speed", "How long it takes for an item to cross a pipe. Bigger = slower.", 5) * 2;
 		maxPipeItems = loadPropInt("Max Pipe Items", "Set to 0 if you don't want pipes to have a max amount of items", 16);
 		pipesCrafted = loadPropInt("Pipes Crafted", "", 6);
-		enableRender = loadPropBool("Enable Pipe Render", "Freel free to disable so you don't see items going through pipes, good if your PC is a potato", true);
+		enableRender = loadPropBool("Enable Pipe Render", "Feel free to disable so you don't see items going through pipes, good if your PC is a potato", true);
+		doPipesWhoosh = loadPropBool("Enable Pipe Sounds", "When items eject or are absorbed by pipes, should they make sounds?", true);
 	}
 	
 	@Override
@@ -36,7 +38,7 @@ public class Pipes extends Feature {
 	}
 	
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {
+	public void postPreInit() {
 		RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(pipe, pipesCrafted), 
 				"I", "G", "I",
 				'I', "ingotIron",
@@ -45,7 +47,7 @@ public class Pipes extends Feature {
 	
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		if(enableRender)
 			ClientRegistry.bindTileEntitySpecialRenderer(TilePipe.class, new RenderTilePipe());
 	}

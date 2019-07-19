@@ -10,13 +10,16 @@ import vazkii.quark.misc.feature.EnderdragonScales;
 import vazkii.quark.misc.feature.EndermitesIntoShulkers;
 import vazkii.quark.misc.feature.ExtraArrows;
 import vazkii.quark.misc.feature.ExtraPotions;
+import vazkii.quark.misc.feature.HorseWhistle;
 import vazkii.quark.misc.feature.LockDirectionHotkey;
 import vazkii.quark.misc.feature.MapMarkers;
 import vazkii.quark.misc.feature.NoteBlockInterface;
 import vazkii.quark.misc.feature.NoteBlocksMobSounds;
 import vazkii.quark.misc.feature.ParrotEggs;
+import vazkii.quark.misc.feature.Pickarang;
 import vazkii.quark.misc.feature.PlaceVanillaDusts;
 import vazkii.quark.misc.feature.PoisonPotatoUsage;
+import vazkii.quark.misc.feature.ReacharoundPlacing;
 import vazkii.quark.misc.feature.SlimeBucket;
 import vazkii.quark.misc.feature.SnowGolemPlayerHeads;
 import vazkii.quark.misc.feature.SoulPowder;
@@ -46,6 +49,9 @@ public class QuarkMisc extends Module {
 		registerFeature(new ExtraPotions());
 		registerFeature(new UtilityRecipes());
 		registerFeature(new ParrotEggs());
+		registerFeature(new Pickarang());
+		registerFeature(new HorseWhistle());
+		registerFeature(new ReacharoundPlacing());
 	}
 	
 	@Override

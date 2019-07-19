@@ -21,6 +21,9 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.World;
 import vazkii.quark.world.feature.DepthMobs;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 public class EntityDweller extends EntityZombie {
 
 	public EntityDweller(World worldIn) {
@@ -35,18 +38,18 @@ public class EntityDweller extends EntityZombie {
 	}
 
 	@Override
-	protected void setEquipmentBasedOnDifficulty(DifficultyInstance difficulty) {
+	protected void setEquipmentBasedOnDifficulty(@Nonnull DifficultyInstance difficulty) {
 		// NO-OP
 	}
 
 	@Override
-	public IEntityLivingData onInitialSpawn(DifficultyInstance difficulty, IEntityLivingData livingdata) {
+	public IEntityLivingData onInitialSpawn(DifficultyInstance difficulty, @Nullable IEntityLivingData data) {
 		addPotionEffect(new PotionEffect(MobEffects.INVISIBILITY, Integer.MAX_VALUE));
-		return super.onInitialSpawn(difficulty, livingdata);
+		return super.onInitialSpawn(difficulty, data);
 	}
 
 	@Override
-	public boolean attackEntityFrom(DamageSource source, float amount) {
+	public boolean attackEntityFrom(@Nonnull DamageSource source, float amount) {
 		if(amount > 0)
 			removePotionEffect(MobEffects.INVISIBILITY);
 		return super.attackEntityFrom(source, amount);

@@ -15,7 +15,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import vazkii.arl.network.NetworkMessage;
 import vazkii.quark.base.module.GlobalConfig;
 
-public class MessageChangeConfig extends NetworkMessage {
+public class MessageChangeConfig extends NetworkMessage<MessageChangeConfig> {
 	
 	public String moduleName;
 	public String category;
@@ -25,7 +25,7 @@ public class MessageChangeConfig extends NetworkMessage {
 	
 	public MessageChangeConfig() { }
 
-	public MessageChangeConfig(String moduleName, String category, String key, String value, boolean saveToFile) {
+	public MessageChangeConfig(String moduleName, String category, String key, String value) {
 		this.moduleName = moduleName;
 		this.category = category;
 		this.key = key;

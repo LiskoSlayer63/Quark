@@ -14,31 +14,29 @@ import com.google.common.collect.ImmutableSet;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import vazkii.quark.base.module.Feature;
 
 public class StackableItems extends Feature {
 
-	int minecarts, soups, saddle;
+	public static int minecarts, soups, saddle;
 
 	@Override
 	public void setupConfig() {
-		minecarts = loadPropInt("Minecarts", "", 16);
-		soups = loadPropInt("Soups", "", 64);
-		saddle = loadPropInt("Saddle", "", 8);
+		minecarts = Math.min(64, loadPropInt("Minecarts", "", 16));
+		soups = Math.min(64, loadPropInt("Soups", "", 64));
+		saddle = Math.min(64, loadPropInt("Saddle", "", 8));
 	}
 
 	@Override
-	public void init(FMLInitializationEvent event) {
-		ImmutableSet.<Item>of(Items.MINECART, Items.CHEST_MINECART, Items.COMMAND_BLOCK_MINECART, Items.FURNACE_MINECART, Items.HOPPER_MINECART, Items.TNT_MINECART)
-		.forEach(item -> item.setMaxStackSize(minecarts));
+	public void init() {
+		ImmutableSet.of(Items.MINECART, Items.CHEST_MINECART, Items.COMMAND_BLOCK_MINECART, Items.FURNACE_MINECART, Items.HOPPER_MINECART, Items.TNT_MINECART)
+			.forEach(item -> item.setMaxStackSize(minecarts));
 		
-		ImmutableSet.<Item>of(Items.MUSHROOM_STEW, Items.RABBIT_STEW, Items.BEETROOT_SOUP)
-		.forEach(item -> item.setMaxStackSize(soups));
+		ImmutableSet.of(Items.MUSHROOM_STEW, Items.RABBIT_STEW, Items.BEETROOT_SOUP)
+			.forEach(item -> item.setMaxStackSize(soups));
 
 		Items.SADDLE.setMaxStackSize(saddle);
 	}
@@ -49,7 +47,7 @@ public class StackableItems extends Feature {
 			EntityPlayer player = (EntityPlayer) event.getEntity();
 			ItemStack original = event.getItem();
 			ItemStack result = event.getResultStack();
-			if(original.getCount() > 1 && result.getItem() == Items.BOWL) {
+			if(original.getCount() > 1 && (result.getItem() == Items.BOWL || result.getItem() == Items.BUCKET)) {
 				ItemStack newResult = original.copy();
 				newResult.setCount(original.getCount() - 1);
 				event.setResultStack(newResult);

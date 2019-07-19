@@ -4,14 +4,14 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import vazkii.quark.base.module.ConfigHelper;
 import vazkii.quark.base.module.ModuleLoader;
-import vazkii.quark.world.block.BlockBiomeCobblestone;
 import vazkii.quark.world.feature.UndergroundBiomes;
 
 public class UndergroundBiomeIcy extends BasicUndergroundBiome {
 	
-	int stalagmiteChance;
-	boolean usePackedIce;
+	public static double stalagmiteChance;
+	public static boolean usePackedIce;
 
 	public UndergroundBiomeIcy() {
 		super(Blocks.ICE.getDefaultState(), null, null, true);
@@ -37,7 +37,7 @@ public class UndergroundBiomeIcy extends BasicUndergroundBiome {
 		BlockPos placePos = pos;
 		world.setBlockState(pos, placeState, 2);
 		
-		if(stalagmiteChance > 0 && world.rand.nextInt(stalagmiteChance) == 0) {
+		if(stalagmiteChance > 0 && world.rand.nextDouble() < stalagmiteChance) {
 			int height = 3 + world.rand.nextInt(3);
 			for(int i = 0; i < height; i++) {
 				placePos = placePos.up();
@@ -52,7 +52,7 @@ public class UndergroundBiomeIcy extends BasicUndergroundBiome {
 	
 	@Override
 	public void setupConfig(String category) {
-		stalagmiteChance = ModuleLoader.config.getInt("Stalagmite Chance", category, 60, 0, Integer.MAX_VALUE, "The higher, the less stalagmites will spawn");
+		stalagmiteChance = ConfigHelper.loadLegacyPropChance("Stalagmite Percentage Chance", category, "Stalagmite Chance", "The chance stalagmites will spawn", 0.015);
 		usePackedIce = ModuleLoader.config.getBoolean("Use Packed Ice", category, true, "");
 	}
 

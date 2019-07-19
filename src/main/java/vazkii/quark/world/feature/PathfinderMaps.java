@@ -1,12 +1,7 @@
 package vazkii.quark.world.feature;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-
 import net.minecraft.entity.IMerchant;
 import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.init.Biomes;
@@ -20,19 +15,22 @@ import net.minecraft.village.MerchantRecipe;
 import net.minecraft.village.MerchantRecipeList;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeMushroomIsland;
 import net.minecraft.world.storage.MapData;
 import net.minecraft.world.storage.MapDecoration.Type;
 import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.fml.common.FMLLog;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.registry.VillagerRegistry.VillagerCareer;
 import net.minecraftforge.fml.common.registry.VillagerRegistry.VillagerProfession;
 import vazkii.arl.util.ItemNBTHelper;
+import vazkii.quark.base.Quark;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.ModuleLoader;
 import vazkii.quark.experimental.world.BiomeLocator;
+
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class PathfinderMaps extends Feature {
 
@@ -43,6 +41,13 @@ public class PathfinderMaps extends Feature {
 	public static boolean printAllBiomeNames;
 	
 	private String[] customs;
+
+	private static String getBiomeDescriptor(Biome biome) {
+		ResourceLocation rl = biome.getRegistryName();
+		if (rl == null)
+			return "unknown";
+		return rl.getPath();
+	}
 	
 	@Override
 	public void setupConfig() {
@@ -90,10 +95,12 @@ public class PathfinderMaps extends Feature {
 		loadCustomMaps(customs);
 		
 		VillagerProfession librarian = event.getRegistry().getValue(new ResourceLocation("minecraft:librarian"));
-		VillagerCareer cartographer = librarian.getCareer(1);
-		
-		for(Integer level : trades.keySet())
-			cartographer.addTrade(level, new PathfinderMapTrade(level));
+		if (librarian != null) {
+			VillagerCareer cartographer = librarian.getCareer(1);
+
+			for (int level : trades.keySet())
+				cartographer.addTrade(level, new PathfinderMapTrade(level));
+		}
  	}
 	
 	private void loadTradeInfo(Biome biome, boolean enabled, int level, int minPrice, int maxPrice, int color) {
@@ -108,7 +115,8 @@ public class PathfinderMaps extends Feature {
 		String category = configCategory + ".";
 		if(!overrideCategory.isEmpty())
 			category += overrideCategory;
-		else category += biome.getRegistryName().getResourcePath();
+		else
+			category += getBiomeDescriptor(biome);
 		
 		TradeInfo info;
 		if(overrideName.isEmpty())
@@ -143,8 +151,8 @@ public class PathfinderMaps extends Feature {
 			try {
 				loadTradeInfo(s);
 			} catch(IllegalArgumentException e) {
-				FMLLog.warning("[Quark][Custom Pathfinder Maps] Error while reading custom map string \"%s\"", s);
-				FMLLog.warning("[Quark][Custom Pathfinder Maps] - %s", e.getMessage());
+				Quark.LOG.warn("[Custom Pathfinder Maps] Error while reading custom map string \"%s\"", s);
+				Quark.LOG.warn("[Custom Pathfinder Maps] - %s", e.getMessage());
 			}
 	}
 
@@ -195,28 +203,28 @@ public class PathfinderMaps extends Feature {
 			this.level = level;
 		}
 
-		public void addMerchantRecipe(IMerchant merchant, MerchantRecipeList recipeList, Random random) {
-			List<TradeInfo> infos = new ArrayList(trades.get(level));
-			if(infos == null || infos.isEmpty())
+		@Override
+		public void addMerchantRecipe(@Nonnull IMerchant merchant, @Nonnull MerchantRecipeList recipeList, @Nonnull Random random) {
+			List<TradeInfo> tradeInfo = new ArrayList<>(trades.get(level));
+			if(tradeInfo.isEmpty())
 				return;
 			
 			if(unlockAllAtOnce)
-				for(TradeInfo info : infos)
+				for(TradeInfo info : tradeInfo)
 					unlock(merchant, recipeList, random, info);
 			else {
-				int amount = (level == 2 && multipleAtFirstUnlock) ? Math.min(infos.size(), 2 + random.nextInt(2)) : 1;
+				int amount = (level == 2 && multipleAtFirstUnlock) ? Math.min(tradeInfo.size(), 2 + random.nextInt(2)) : 1;
 				
 				for(int i = 0; i < amount; i++) {
-					TradeInfo info = infos.get(random.nextInt(infos.size()));
+					TradeInfo info = tradeInfo.get(random.nextInt(tradeInfo.size()));
 					unlock(merchant, recipeList, random, info);
-					infos.remove(info);
+					tradeInfo.remove(info);
 				}
 			}
 		}
 		
 		private void unlock(IMerchant merchant, MerchantRecipeList recipeList, Random random, TradeInfo info) {
 			int i = random.nextInt(info.maxPrice - info.minPrice + 1) + info.minPrice;
-			World world = merchant.getWorld();
 
 			ItemStack itemstack = createMap(merchant.getWorld(), merchant.getPos(), info); 
 			if(itemstack.isEmpty())
@@ -238,7 +246,7 @@ public class PathfinderMaps extends Feature {
 		public final String name;
 		
 		TradeInfo(String category, Biome biome, boolean enabled, int level, int minPrice, int maxPrice, int color) {
-			this(category, biome, enabled, level, minPrice, maxPrice, color, "quark.biomeMap." + biome.getRegistryName().getResourcePath());
+			this(category, biome, enabled, level, minPrice, maxPrice, color, "quark.biomeMap." + getBiomeDescriptor(biome));
 		}
 		
 		TradeInfo(String category, Biome biome, boolean enabled, int level, int minPrice, int maxPrice, int color, String name) {

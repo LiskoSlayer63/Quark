@@ -23,7 +23,7 @@ import vazkii.quark.building.block.slab.BlockVanillaSlab;
 
 public class VanillaStairsAndSlabs extends Feature {
 
-	boolean stone, granite, diorite, andesite, endBricks, prismarine, prismarineBricks, darkPrismarine, redNetherBricks;
+	public static boolean stone, granite, diorite, andesite, endBricks, prismarine, prismarineBricks, darkPrismarine, redNetherBricks, mossStone, mossBricks;
 
 	@Override
 	public void setupConfig() {
@@ -36,6 +36,8 @@ public class VanillaStairsAndSlabs extends Feature {
 		prismarineBricks = loadPropBool("Prismarine Bricks", "", true);
 		darkPrismarine = loadPropBool("Dark Prismarine", "", true);
 		redNetherBricks = loadPropBool("Red Nether Brick", "", true);
+		mossStone = loadPropBool("Enable Mossy Stone", "", true);
+		mossBricks = loadPropBool("Enable Mossy Bricks", "", true);
 	}
 
 	@Override
@@ -52,12 +54,15 @@ public class VanillaStairsAndSlabs extends Feature {
 		add("prismarine_bricks", Blocks.PRISMARINE, 1, prismarineBricks);
 		add("prismarine_dark", Blocks.PRISMARINE, 2, darkPrismarine);
 		add("red_nether_brick", Blocks.RED_NETHER_BRICK, 0, redNetherBricks);
+		add("cobblestone_mossy", Blocks.MOSSY_COBBLESTONE, 0, mossStone);
+		add("stonebrick_mossy", Blocks.STONEBRICK, 1, mossBricks);
 	}
 
 	public void add(String name, Block block, int meta, boolean doit) {
 		add(name, block, meta, true, true, doit);
 	}
 
+	@SuppressWarnings("deprecation")
 	public void add(String name, Block block, int meta, boolean slab, boolean stairs, boolean doit) {
 		if(!doit)
 			return;

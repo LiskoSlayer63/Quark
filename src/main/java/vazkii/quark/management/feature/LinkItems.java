@@ -19,12 +19,17 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.NetHandlerPlayServer;
+import net.minecraft.server.management.PlayerList;
 import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextComponentTranslation;
+import net.minecraftforge.client.event.ClientChatEvent;
 import net.minecraftforge.client.event.GuiScreenEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.ServerChatEvent;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.relauncher.ReflectionHelper;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.arl.network.NetworkHandler;
 import vazkii.quark.base.lib.LibObfuscation;
 import vazkii.quark.base.module.Feature;
@@ -34,6 +39,7 @@ import vazkii.quark.base.network.message.MessageLinkItem;
 public class LinkItems extends Feature {
 
 	@SubscribeEvent
+	@SideOnly(Side.CLIENT)
 	public void keyboardEvent(GuiScreenEvent.KeyboardInputEvent.Post event) {
 		if(GameSettings.isKeyDown(Minecraft.getMinecraft().gameSettings.keyBindChat) && event.getGui() instanceof GuiContainer && GuiScreen.isShiftKeyDown()) {
 			GuiContainer gui = (GuiContainer) event.getGui();
@@ -42,7 +48,7 @@ public class LinkItems extends Feature {
 			if(slot != null && slot.inventory != null && !"tmp".equals(slot.inventory.getName())) { // "tmp" checks for a creative inventory
 				ItemStack stack = slot.getStack();
 
-				if(!stack.isEmpty())
+				if(!stack.isEmpty() && !MinecraftForge.EVENT_BUS.post(new ClientChatEvent(stack.getTextComponent().getUnformattedText())))
 					NetworkHandler.INSTANCE.sendToServer(new MessageLinkItem(stack));
 			}
 		}
@@ -53,21 +59,24 @@ public class LinkItems extends Feature {
 			return;
 
 		if(!item.isEmpty() && player instanceof EntityPlayerMP) {
-			ITextComponent comp = new TextComponentString("<");
-			comp.appendSibling(player.getDisplayName());
-			comp.appendSibling(new TextComponentString("> "));
-			comp.appendSibling(item.getTextComponent());
+			ITextComponent comp = item.getTextComponent();
+			ITextComponent fullComp = new TextComponentTranslation("chat.type.text", player.getDisplayName(), comp);
 
-			player.getServer().getPlayerList().sendMessage(comp, false);
+			PlayerList players = ((EntityPlayerMP) player).server.getPlayerList();
 
-			NetHandlerPlayServer handler = ((EntityPlayerMP) player).connection;
-			int treshold = ReflectionHelper.getPrivateValue(NetHandlerPlayServer.class, handler, LibObfuscation.CHAT_SPAM_TRESHOLD_COUNT);
-			treshold += 20;
+			ServerChatEvent event = new ServerChatEvent((EntityPlayerMP) player, comp.getUnformattedText(), fullComp);
+			if (!MinecraftForge.EVENT_BUS.post(event)) {
+				players.sendMessage(fullComp, false);
 
-			if(treshold > 200 && !player.getServer().getPlayerList().canSendCommands(player.getGameProfile()))
-				handler.onDisconnect(new TextComponentTranslation("disconnect.spam"));
+				NetHandlerPlayServer handler = ((EntityPlayerMP) player).connection;
+				int threshold = ObfuscationReflectionHelper.getPrivateValue(NetHandlerPlayServer.class, handler, LibObfuscation.CHAT_SPAM_THRESHOLD_COUNT);
+				threshold += 20;
 
-			ReflectionHelper.setPrivateValue(NetHandlerPlayServer.class, handler, treshold, LibObfuscation.CHAT_SPAM_TRESHOLD_COUNT);
+				if (threshold > 200 && !players.canSendCommands(player.getGameProfile()))
+					handler.onDisconnect(new TextComponentTranslation("disconnect.spam"));
+
+				ObfuscationReflectionHelper.setPrivateValue(NetHandlerPlayServer.class, handler, threshold, LibObfuscation.CHAT_SPAM_THRESHOLD_COUNT);
+			}
 		}
 
 	}

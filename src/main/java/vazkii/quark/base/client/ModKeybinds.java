@@ -1,33 +1,32 @@
 package vazkii.quark.base.client;
 
-import java.util.HashMap;
-import java.util.List;
-
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
-
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.GuiScreenEvent.KeyboardInputEvent;
+import net.minecraftforge.client.event.GuiScreenEvent.MouseInputEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.relauncher.ReflectionHelper;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import vazkii.quark.base.lib.LibObfuscation;
 import vazkii.quark.vanity.client.emotes.EmoteDescriptor;
 import vazkii.quark.vanity.client.emotes.EmoteHandler;
 
+import java.util.HashMap;
+import java.util.List;
+
 public class ModKeybinds {
 
-	public static HashMap<KeyBinding, String> emoteKeys = new HashMap();
+	public static final HashMap<KeyBinding, String> emoteKeys = new HashMap<>();
 
-	public static BiMap<KeyBinding, IParentedGui> keyboundButtons = HashBiMap.create();
+	public static final BiMap<KeyBinding, IParentedGui> keyboundButtons = HashBiMap.create();
 
 	public static KeyBinding lockKey = null;
 	public static KeyBinding autoJumpKey = null;
@@ -48,7 +47,7 @@ public class ModKeybinds {
 	public static void initEmoteKeybinds() {
 		for(String emoteName : EmoteHandler.emoteMap.keySet()) {
 			EmoteDescriptor desc = EmoteHandler.emoteMap.get(emoteName);
-			KeyBinding key = init(desc.getUnlocalizedName(), 0, EMOTE_GROUP, false);
+			KeyBinding key = init(desc.getTranslationKey(), 0, EMOTE_GROUP, false);
 			emoteKeys.put(key, emoteName);
 		}
 	}
@@ -120,8 +119,8 @@ public class ModKeybinds {
 
 	private static class KeybindButtonHandler {
 
-		final KeyBinding ref;
-		boolean down;
+		private final KeyBinding ref;
+		private boolean down;
 
 		public KeybindButtonHandler(KeyBinding ref) {
 			this.ref = ref;
@@ -129,24 +128,32 @@ public class ModKeybinds {
 		}
 
 		@SubscribeEvent
-		public void onKeyinput(KeyboardInputEvent.Post event) {
+		public void onKeyInput(KeyboardInputEvent.Post event) {
+			updateInput();
+		}
+
+		@SubscribeEvent
+		public void onMouseInput(MouseInputEvent.Post event) {
+			updateInput();
+		}
+
+		public void updateInput() {
 			boolean wasDown = down;
 			down = isKeyDown(ref);
-			
+
 			if(!wasDown && down && keyboundButtons.containsKey(ref)) {
 				IParentedGui ipg = keyboundButtons.get(ref);
 				GuiScreen curr = Minecraft.getMinecraft().currentScreen;
 				if(curr == ipg.getParent()) {
 					GuiButton button = (GuiButton) ipg;
 					if(button.enabled && button.visible) {
-						List<GuiButton> buttonList = ReflectionHelper.getPrivateValue(GuiScreen.class, curr, LibObfuscation.BUTTON_LIST);
+						List<GuiButton> buttonList = ObfuscationReflectionHelper.getPrivateValue(GuiScreen.class, curr, LibObfuscation.BUTTON_LIST);
 						GuiScreenEvent.ActionPerformedEvent.Pre postEvent = new GuiScreenEvent.ActionPerformedEvent.Pre(curr, button, buttonList);
 						MinecraftForge.EVENT_BUS.post(postEvent);
 					}
 				}
 			}
 		}
-
 	}
 
 }

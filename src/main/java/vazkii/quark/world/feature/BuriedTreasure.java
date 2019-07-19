@@ -11,16 +11,10 @@
 package vazkii.quark.world.feature;
 
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Random;
-
 import com.google.common.collect.ImmutableSet;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
-
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
@@ -48,17 +42,20 @@ import vazkii.arl.util.ItemNBTHelper;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.base.module.Feature;
 
+import javax.annotation.Nonnull;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+
 public class BuriedTreasure extends Feature {
 
-	public static String TAG_TREASURE_MAP = "Quark:TreasureMap";
-	public static String TAG_TREASURE_MAP_DELEGATE = "Quark:TreasureMapDelegate";
+	public static final String TAG_TREASURE_MAP = "Quark:TreasureMap";
+	public static final String TAG_TREASURE_MAP_DELEGATE = "Quark:TreasureMapDelegate";
 
-	ImmutableSet<ResourceLocation> tablesToEdit = ImmutableSet.of(LootTableList.CHESTS_DESERT_PYRAMID, LootTableList.CHESTS_JUNGLE_TEMPLE, LootTableList.CHESTS_STRONGHOLD_CORRIDOR);
-	Map<ResourceLocation, String> customPools = new HashMap() {{
-		put(PirateShips.PIRATE_CHEST_LOOT_TABLE, "quark:pirate_ship");
-	}};
+	public static final ImmutableSet<ResourceLocation> tablesToEdit = ImmutableSet.of(LootTableList.CHESTS_DESERT_PYRAMID, LootTableList.CHESTS_JUNGLE_TEMPLE, LootTableList.CHESTS_STRONGHOLD_CORRIDOR);
+	public static final Map<ResourceLocation, String> customPools = new HashMap<>();
 
-	int rarity, quality;
+	public static int rarity, quality;
 
 	@Override
 	public void setupConfig() {
@@ -69,6 +66,7 @@ public class BuriedTreasure extends Feature {
 	@Override
 	public void preInit(FMLPreInitializationEvent event) {
 		LootFunctionManager.registerFunction(new SetAsTreasureFunction.Serializer());
+		customPools.put(PirateShips.PIRATE_CHEST_LOOT_TABLE, "quark:pirate_ship");
 	}
 	
 	@SubscribeEvent
@@ -122,20 +120,21 @@ public class BuriedTreasure extends Feature {
 		MapData mapdata = new MapData(s);
 		world.setData(s, mapdata);
 		mapdata.scale = 1;
-		mapdata.xCenter = treasurePos.getX() + (int) ((Math.random() - 0.5) * 100);
-		mapdata.zCenter = treasurePos.getZ() + (int) ((Math.random() - 0.5) * 100);
+		mapdata.calculateMapCenter(treasurePos.getX() + (int) ((Math.random() - 0.5) * 100),
+				treasurePos.getZ() + (int) ((Math.random() - 0.5) * 100),
+				mapdata.scale);
 		mapdata.dimension = 0;
 		mapdata.trackingPosition = true;
 		mapdata.unlimitedTracking = true;
-        ItemMap.renderBiomePreviewMap(world, itemstack);
-		mapdata.addTargetDecoration(itemstack, treasurePos, "x", Type.TARGET_X);
+		ItemMap.renderBiomePreviewMap(world, itemstack);
+		MapData.addTargetDecoration(itemstack, treasurePos, "x", Type.TARGET_X);
 
 		mapdata.markDirty();
 
 		world.setBlockState(treasurePos, Blocks.CHEST.getDefaultState());
 		TileEntityChest chest = (TileEntityChest) world.getTileEntity(treasurePos);
-
-		chest.setLootTable(LootTableList.CHESTS_SIMPLE_DUNGEON, r.nextLong());
+		if (chest != null)
+			chest.setLootTable(LootTableList.CHESTS_SIMPLE_DUNGEON, r.nextLong());
 
 		ItemNBTHelper.setBoolean(itemstack, TAG_TREASURE_MAP, true);
 		ItemNBTHelper.setBoolean(itemstack, TAG_TREASURE_MAP_DELEGATE, false);
@@ -163,8 +162,9 @@ public class BuriedTreasure extends Feature {
 			super(new LootCondition[0]);
 		}
 
+		@Nonnull
 		@Override
-		public ItemStack apply(ItemStack stack, Random rand, LootContext context) {
+		public ItemStack apply(@Nonnull ItemStack stack, @Nonnull Random rand, @Nonnull LootContext context) {
 			int id = context.getWorld().getUniqueDataId("map");
 			stack.setItemDamage(id);
 			stack.setTranslatableName("quarkmisc.buried_chest_map");
@@ -183,12 +183,13 @@ public class BuriedTreasure extends Feature {
 			}
 
 			@Override
-			public void serialize(JsonObject object, SetAsTreasureFunction functionClazz,
-					JsonSerializationContext serializationContext) {}
+			public void serialize(@Nonnull JsonObject object, @Nonnull SetAsTreasureFunction functionClazz,
+								  @Nonnull JsonSerializationContext serializationContext) {}
 
+			@Nonnull
 			@Override
-			public SetAsTreasureFunction deserialize(JsonObject object, JsonDeserializationContext deserializationContext,
-					LootCondition[] conditionsIn) {
+			public SetAsTreasureFunction deserialize(@Nonnull JsonObject object, @Nonnull JsonDeserializationContext deserializationContext,
+													 @Nonnull LootCondition[] conditionsIn) {
 				return new SetAsTreasureFunction();
 			}
 		}

@@ -1,17 +1,17 @@
 package vazkii.quark.base.handler;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.potion.Potion;
 import net.minecraft.tileentity.TileEntityBeacon;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.ReflectionHelper;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import vazkii.quark.base.lib.LibObfuscation;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 public final class BeaconReplacementHandler {
 
@@ -19,7 +19,7 @@ public final class BeaconReplacementHandler {
 	private static List<Replacer> replacers;
 	
 	public static void parse(String[] lines) {
-		replacers = new LinkedList();
+		replacers = new LinkedList<>();
 
 		for(String s : lines) {
 			Replacer r = Replacer.fromString(s);
@@ -40,7 +40,7 @@ public final class BeaconReplacementHandler {
 			}
 		}
 		
-		Set<Potion> validEffects = ReflectionHelper.getPrivateValue(TileEntityBeacon.class, null, LibObfuscation.VALID_EFFECTS);
+		Set<Potion> validEffects = ObfuscationReflectionHelper.getPrivateValue(TileEntityBeacon.class, null, LibObfuscation.VALID_EFFECTS);
 		for(Replacer r : replacers)
 			validEffects.add(r.potion);
 	}
@@ -59,17 +59,17 @@ public final class BeaconReplacementHandler {
 				if(i == 0 && j == 0)
 					continue;
 				
-				BlockPos tpos = pos.add(i, 0, j);
-				IBlockState state = world.getBlockState(tpos);
+				BlockPos targetPos = pos.add(i, 0, j);
+				IBlockState state = world.getBlockState(targetPos);
 				replacers.forEach(r -> r.replace(state));
 			}
 	}
 	
 	private static class Replacer {
 		
-		final Block block;
-		final int meta, layer, effect;
-		final Potion potion;
+		private final Block block;
+		private final int meta, layer, effect;
+		private final Potion potion;
 		
 		public Replacer(Block block, int meta, int layer, int effect, Potion potion) {
 			this.block = block;

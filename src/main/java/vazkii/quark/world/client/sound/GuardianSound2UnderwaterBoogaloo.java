@@ -17,7 +17,7 @@ import net.minecraft.entity.player.EntityPlayer;
 
 public class GuardianSound2UnderwaterBoogaloo extends GuardianSound {
 
-	EntityGuardian visibleGuardian;
+	private final EntityGuardian visibleGuardian;
 
 	public GuardianSound2UnderwaterBoogaloo(EntityGuardian guardian) {
 		super(guardian);
@@ -27,7 +27,7 @@ public class GuardianSound2UnderwaterBoogaloo extends GuardianSound {
 	@Override
 	public void update() {
 		EntityLivingBase target = visibleGuardian.getTargetedEntity();
-		if(target == null || !(target instanceof EntityPlayer)) {
+		if(!(target instanceof EntityPlayer)) {
 			donePlaying = true;
 			return;
 		}

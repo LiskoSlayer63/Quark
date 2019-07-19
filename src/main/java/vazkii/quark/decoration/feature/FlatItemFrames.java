@@ -41,7 +41,7 @@ public class FlatItemFrames extends Feature {
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		RenderingRegistry.registerEntityRenderingHandler(EntityFlatItemFrame.class, RenderFlatItemFrame.FACTORY);
 	}
 	
@@ -61,7 +61,7 @@ public class FlatItemFrames extends Feature {
 
 		EntityHanging entityhanging = new EntityFlatItemFrame(world, blockpos, facing);
 
-		if(entityhanging != null && entityhanging.onValidSurface()) {
+		if(entityhanging.onValidSurface()) {
 			if(!event.getWorld().isRemote) {
 				entityhanging.playPlaceSound();
 				world.spawnEntity(entityhanging);
@@ -81,7 +81,7 @@ public class FlatItemFrames extends Feature {
 	@Override
 	public boolean requiresMinecraftRestartToEnable() {
 		return true;
-    }
+	}
 	
 	@Override
 	public String[] getIncompatibleMods() {

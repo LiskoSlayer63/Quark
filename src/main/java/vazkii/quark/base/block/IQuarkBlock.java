@@ -10,7 +10,12 @@
  */
 package vazkii.quark.base.block;
 
+import net.minecraft.block.Block;
+import net.minecraft.item.ItemBlock;
+import net.minecraft.util.ResourceLocation;
 import vazkii.arl.interf.IModBlock;
+import vazkii.arl.item.ItemModBlock;
+import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.lib.LibMisc;
 
 public interface IQuarkBlock extends IModBlock {
@@ -18,6 +23,18 @@ public interface IQuarkBlock extends IModBlock {
 	@Override
 	default String getModNamespace() {
 		return LibMisc.MOD_ID;
+	}
+
+	default void register(String name) {
+		Block self = (Block) this;
+		ResourceLocation regName = new ResourceLocation(LibMisc.PREFIX_MOD + name);
+		self.setRegistryName(regName);
+		ProxyRegistry.register(self);
+		ProxyRegistry.register(createItemInstance(regName));
+	}
+
+	default ItemBlock createItemInstance(ResourceLocation regName) {
+		return new ItemModBlock((Block) this, regName);
 	}
 	
 }

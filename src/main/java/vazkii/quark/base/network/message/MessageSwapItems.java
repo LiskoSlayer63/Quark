@@ -15,7 +15,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import vazkii.arl.network.NetworkMessage;
 import vazkii.quark.management.feature.FToSwitchItems;
 
-public class MessageSwapItems extends NetworkMessage {
+public class MessageSwapItems extends NetworkMessage<MessageSwapItems> {
 
 	public int index;
 
@@ -27,7 +27,8 @@ public class MessageSwapItems extends NetworkMessage {
 
 	@Override
 	public IMessage handleMessage(MessageContext context) {
-		FToSwitchItems.switchItems(context.getServerHandler().player, index);
+		context.getServerHandler().player.getServerWorld().addScheduledTask(() ->
+			FToSwitchItems.switchItems(context.getServerHandler().player, index));
 		return null;
 	}
 

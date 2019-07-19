@@ -1,12 +1,15 @@
 package vazkii.quark.vanity.client.emotes;
 
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import vazkii.quark.vanity.feature.EmoteSystem;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 
-import vazkii.quark.vanity.feature.EmoteSystem;
-
+@SideOnly(Side.CLIENT)
 public class CustomEmoteTemplate extends EmoteTemplate {
 
 	private String name;
@@ -18,6 +21,7 @@ public class CustomEmoteTemplate extends EmoteTemplate {
 			name = file;
 	}
 	
+	@Override
 	BufferedReader createReader() throws FileNotFoundException {
 		return new BufferedReader(new FileReader(new File(EmoteSystem.emotesDir, file)));
 	}

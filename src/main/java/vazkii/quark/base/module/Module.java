@@ -10,30 +10,30 @@
  */
 package vazkii.quark.base.module;
 
+import net.minecraft.init.Blocks;
+import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.config.Property;
+import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import vazkii.quark.api.module.FeatureEvent;
+import vazkii.quark.api.module.IFeature;
+import vazkii.quark.api.module.IModule;
+import vazkii.quark.base.Quark;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import net.minecraft.init.Blocks;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.Property;
-import net.minecraftforge.fml.common.FMLLog;
-import net.minecraftforge.fml.common.Loader;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-
-public class Module implements Comparable<Module> {
+public class Module implements IModule {
 
 	public final String name = makeName();
-	public final Map<String, Feature> features = new HashMap();
-	public final List<Feature> enabledFeatures = new ArrayList();
+	public final Map<String, Feature> features = new HashMap<>();
+	public final List<Feature> enabledFeatures = new ArrayList<>();
 	public boolean enabled;
 	public Property prop;
 
@@ -62,17 +62,19 @@ public class Module implements Comparable<Module> {
 		Class<? extends Feature> clazz = feature.getClass();
 		if(ModuleLoader.featureInstances.containsKey(clazz))
 			throw new IllegalArgumentException("Feature " + clazz + " is already registered!");
-		
-		ModuleLoader.featureInstances.put(clazz, feature);
-		ModuleLoader.featureClassnames.put(clazz.getSimpleName(), feature);
-		features.put(name, feature);
 
 		feature.enabledByDefault = enabledByDefault;
 		feature.prevEnabled = false;
-		
+
 		feature.module = this;
 		feature.configName = name;
 		feature.configCategory = this.name + "." + name;
+
+		if (!MinecraftForge.EVENT_BUS.post(new FeatureEvent.Loaded(feature))) {
+			ModuleLoader.featureInstances.put(clazz, feature);
+			ModuleLoader.featureClassnames.put(clazz.getSimpleName(), feature);
+			features.put(name, feature);
+		}
 	}
 
 	public void setupConfig() {
@@ -89,16 +91,16 @@ public class Module implements Comparable<Module> {
 			if(!feature.forceLoad && GlobalConfig.enableAntiOverlap) {
 				String[] incompatibilities = feature.getIncompatibleMods();
 				if(incompatibilities != null) {
-					List<String> failiures = new ArrayList();
+					List<String> failures = new ArrayList<>();
 
 					for(String s : incompatibilities)
 						if(Loader.isModLoaded(s)) {
 							feature.enabled = false;
-							failiures.add(s);
+							failures.add(s);
 						}
 					
-					if(!failiures.isEmpty())
-						FMLLog.info("[Quark] '" + feature.configName + "' is forcefully disabled as it's incompatible with the following loaded mods: " + failiures);
+					if(!failures.isEmpty())
+						Quark.LOG.info("'" + feature.configName + "' is forcefully disabled as it's incompatible with the following loaded mods: " + failures);
 				}
 			}
 			
@@ -109,12 +111,13 @@ public class Module implements Comparable<Module> {
 			
 			if(feature.enabled && !enabledFeatures.contains(feature))
 				enabledFeatures.add(feature);
-			else if(!feature.enabled && enabledFeatures.contains(feature))
+			else if(!feature.enabled)
 				enabledFeatures.remove(feature);
 			
 			feature.setupConfig();
 			
 			if(!feature.enabled && feature.prevEnabled) {
+				MinecraftForge.EVENT_BUS.post(new FeatureEvent.Disabled(feature));
 				if(feature.hasSubscriptions())
 					MinecraftForge.EVENT_BUS.unregister(feature);
 				if(feature.hasTerrainSubscriptions())
@@ -122,7 +125,9 @@ public class Module implements Comparable<Module> {
 				if(feature.hasOreGenSubscriptions())
 					MinecraftForge.ORE_GEN_BUS.unregister(feature);
 				feature.onDisabled();
+				MinecraftForge.EVENT_BUS.post(new FeatureEvent.PostDisable(feature));
 			} else if(feature.enabled && (feature.enabledAtLoadtime || !feature.requiresMinecraftRestartToEnable()) && !feature.prevEnabled) {
+				MinecraftForge.EVENT_BUS.post(new FeatureEvent.Enabled(feature));
 				if(feature.hasSubscriptions())
 					MinecraftForge.EVENT_BUS.register(feature);
 				if(feature.hasTerrainSubscriptions())
@@ -130,6 +135,7 @@ public class Module implements Comparable<Module> {
 				if(feature.hasOreGenSubscriptions())
 					MinecraftForge.ORE_GEN_BUS.register(feature);
 				feature.onEnabled();
+				MinecraftForge.EVENT_BUS.post(new FeatureEvent.PostEnable(feature));
 			}
 			
 			feature.prevEnabled = feature.enabled;
@@ -140,39 +146,39 @@ public class Module implements Comparable<Module> {
 		forEachEnabled(feature -> feature.preInit(event));
 	}
 	
-	public void postPreInit(FMLPreInitializationEvent event) {
-		forEachEnabled(feature -> feature.postPreInit(event));
+	public void postPreInit() {
+		forEachEnabled(Feature::postPreInit);
 	}
 
-	public void init(FMLInitializationEvent event) {
-		forEachEnabled(feature -> feature.init(event));
+	public void init() {
+		forEachEnabled(Feature::init);
 	}
 
-	public void postInit(FMLPostInitializationEvent event) {
-		forEachEnabled(feature -> feature.postInit(event));
+	public void postInit() {
+		forEachEnabled(Feature::postInit);
 	}
 	
-	public void finalInit(FMLPostInitializationEvent event) {
-		forEachEnabled(feature -> feature.finalInit(event));
+	public void finalInit() {
+		forEachEnabled(Feature::finalInit);
 	}
 	
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
-		forEachEnabled(feature -> feature.preInitClient(event));
+	public void preInitClient() {
+		forEachEnabled(Feature::preInitClient);
 	}
 
 	@SideOnly(Side.CLIENT)
-	public void initClient(FMLInitializationEvent event) {
-		forEachEnabled(feature -> feature.initClient(event));
+	public void initClient() {
+		forEachEnabled(Feature::initClient);
 	}
 
 	@SideOnly(Side.CLIENT)
-	public void postInitClient(FMLPostInitializationEvent event) {
-		forEachEnabled(feature -> feature.postInitClient(event));
+	public void postInitClient() {
+		forEachEnabled(Feature::postInitClient);
 	}
 
-	public void serverStarting(FMLServerStartingEvent event) {
-		forEachEnabled(feature -> feature.serverStarting(event));
+	public void serverStarting() {
+		forEachEnabled(Feature::serverStarting);
 	}
 
 	public boolean canBeDisabled() {
@@ -220,8 +226,22 @@ public class Module implements Comparable<Module> {
 	}
 
 	@Override
-	public int compareTo(Module o) {
-		return name.compareTo(o.name);
+	public String getName() {
+		return name;
 	}
 
+	@Override
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	@Override
+	public Map<String, ? extends IFeature> getFeatures() {
+		return features;
+	}
+
+	@Override
+	public List<? extends IFeature> getEnabledFeatures() {
+		return enabledFeatures;
+	}
 }

@@ -10,11 +10,10 @@
  */
 package vazkii.quark.building.block;
 
-import java.util.function.Supplier;
-
 import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.util.IStringSerializable;
 import vazkii.arl.block.BlockMetaVariants;
 import vazkii.quark.base.block.IQuarkBlock;
 import vazkii.quark.base.module.Feature;
@@ -23,7 +22,10 @@ import vazkii.quark.building.feature.WorldStoneBricks;
 import vazkii.quark.world.feature.Basalt;
 import vazkii.quark.world.feature.RevampStoneGen;
 
-public class BlockWorldStonePavement extends BlockMetaVariants implements IQuarkBlock {
+import java.util.Locale;
+import java.util.function.Supplier;
+
+public class BlockWorldStonePavement extends BlockMetaVariants<BlockWorldStonePavement.Variants> implements IQuarkBlock {
 
 	public BlockWorldStonePavement() {
 		super("world_stone_pavement", Material.ROCK, Variants.class);
@@ -35,23 +37,25 @@ public class BlockWorldStonePavement extends BlockMetaVariants implements IQuark
 
 	@Override
 	public boolean shouldDisplayVariant(int variant) {
-		return Variants.class.getEnumConstants()[variant].isEnabled();
+		return Variants.values()[variant].isEnabled();
 	}
 
-	public enum Variants implements EnumBase {
+	public enum Variants implements IStringSerializable {
 		
 		STONE_GRANITE_PAVEMENT(WorldStoneBricks.class),
 		STONE_DIORITE_PAVEMENT(WorldStoneBricks.class),
 		STONE_ANDESITE_PAVEMENT(WorldStoneBricks.class),
 		STONE_BASALT_PAVEMENT(Basalt.class),
 		STONE_MARBLE_PAVEMENT(RevampStoneGen.class, () -> RevampStoneGen.enableMarble),
-		STONE_LIMESTONE_PAVEMENT(RevampStoneGen.class, () -> RevampStoneGen.enableLimestone);
+		STONE_LIMESTONE_PAVEMENT(RevampStoneGen.class, () -> RevampStoneGen.enableLimestone),
+		STONE_JASPER_PAVEMENT(RevampStoneGen.class, () -> RevampStoneGen.enableJasper),
+		STONE_SLATE_PAVEMENT(RevampStoneGen.class, () -> RevampStoneGen.enableSlate);
 		
-		private Variants(Class<? extends Feature> clazz) {
+		Variants(Class<? extends Feature> clazz) {
 			this(clazz, () -> true);
 		}
 		
-		private Variants(Class<? extends Feature> clazz, Supplier<Boolean> enabledCond) {
+		Variants(Class<? extends Feature> clazz, Supplier<Boolean> enabledCond) {
 			featureLink = clazz;
 			this.enabledCond = enabledCond;
 		}
@@ -61,6 +65,11 @@ public class BlockWorldStonePavement extends BlockMetaVariants implements IQuark
 		
 		public boolean isEnabled() {
 			return ModuleLoader.isFeatureEnabled(featureLink) && enabledCond.get();
+		}
+
+		@Override
+		public String getName() {
+			return name().toLowerCase(Locale.ROOT);
 		}
 		
 	}

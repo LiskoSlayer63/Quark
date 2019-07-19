@@ -1,54 +1,52 @@
 package vazkii.quark.management.feature;
 
-import java.util.List;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.GuiOpenEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent.PlayerTickEvent;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraftforge.oredict.OreDictionary;
 import vazkii.arl.network.NetworkHandler;
 import vazkii.quark.base.Quark;
 import vazkii.quark.base.lib.LibEntityIDs;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.network.message.MessageRequestPassengerChest;
-import vazkii.quark.decoration.item.ItemChestBlock;
 import vazkii.quark.management.client.render.RenderChestPassenger;
 import vazkii.quark.management.entity.EntityChestPassenger;
+
+import java.util.List;
 
 public class ChestsInBoats extends Feature {
 
 	@Override
 	public void preInit(FMLPreInitializationEvent event) {
 		String name = LibMisc.PREFIX_MOD + "chest_passenger";
-		EntityRegistry.registerModEntity(new ResourceLocation(name), EntityChestPassenger.class, name, LibEntityIDs.CHEST_PASSENGER, Quark.instance, 64, Integer.MAX_VALUE, false);
+		EntityRegistry.registerModEntity(new ResourceLocation(name), EntityChestPassenger.class, name, LibEntityIDs.CHEST_PASSENGER, Quark.instance, 64, 128, false);
 	}
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		RenderingRegistry.registerEntityRenderingHandler(EntityChestPassenger.class, RenderChestPassenger.factory());
 	}
 
 	@SubscribeEvent
-	public void onEntityInteract(EntityInteract event) {
+	public void onEntityInteract(PlayerInteractEvent.EntityInteractSpecific event) {
 		Entity target = event.getTarget();
 		EntityPlayer player = event.getEntityPlayer();
 
@@ -66,15 +64,16 @@ public class ChestsInBoats extends Feature {
 				passenger.setPosition(target.posX, target.posY, target.posZ);
 				passenger.rotationYaw = target.rotationYaw;
 				
-				if(!player.isCreative())
-					stack.shrink(1);
-				
-				world.spawnEntity(passenger);
-				passenger.startRiding(target);
+				if(!event.getWorld().isRemote) {
+					if (!player.isCreative())
+						stack.shrink(1);
+					world.spawnEntity(passenger);
+					passenger.startRiding(target);
+				}
 				
 				player.swingArm(hand);
-				if(!event.getWorld().isRemote)
-					event.setCanceled(true);
+				event.setCancellationResult(EnumActionResult.SUCCESS);
+				event.setCanceled(true);
 			}
 		}
 	}
@@ -98,7 +97,17 @@ public class ChestsInBoats extends Feature {
 	}
 	
 	private boolean isChest(ItemStack stack) {
-		return stack.getItem() == Item.getItemFromBlock(Blocks.CHEST) || stack.getItem() instanceof ItemChestBlock;
+		if (stack.isEmpty())
+			return false;
+
+		int chestId = OreDictionary.getOreID("chestWood");
+		int[] ids = OreDictionary.getOreIDs(stack);
+		for (int id : ids) {
+			if (id == chestId)
+				return true;
+		}
+
+		return false;
 	}
 	
 	@Override

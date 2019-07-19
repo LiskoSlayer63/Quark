@@ -1,10 +1,7 @@
 package vazkii.quark.vanity.feature;
 
-import java.awt.Color;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemDye;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.text.TextFormatting;
@@ -14,9 +11,12 @@ import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraftforge.oredict.DyeUtils;
 import vazkii.arl.util.ItemNBTHelper;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.management.feature.FavoriteItems;
+
+import java.awt.*;
 
 public class DyeItemNames extends Feature {
 
@@ -41,7 +41,7 @@ public class DyeItemNames extends Feature {
 	@SideOnly(Side.CLIENT)
 	public void renderTooltip(RenderTooltipEvent.PostText event) {
 		ItemStack stack = event.getStack(); 
-		if(stack != null && !stack.isEmpty() && stack.hasTagCompound()) {
+		if(!stack.isEmpty() && stack.hasTagCompound()) {
 			int dye = ItemNBTHelper.getInt(stack, TAG_DYE, -1);
 			if(dye != -1) {
 				int rgb = ItemDye.DYE_COLORS[Math.min(15, dye)];
@@ -64,15 +64,19 @@ public class DyeItemNames extends Feature {
 		ItemStack left = event.getLeft();
 		ItemStack right = event.getRight();
 
-		if (!left.isEmpty() && !right.isEmpty() && right.getItem() == Items.DYE) {
-			ItemStack out = left.copy();
-			String name = event.getName();
-			if(!name.trim().isEmpty())
-				out.setStackDisplayName(name.trim());
-			
-			ItemNBTHelper.setInt(out, TAG_DYE, right.getItemDamage());
-			event.setOutput(out);
-			event.setCost(3);
+		if (!left.isEmpty() && !right.isEmpty()) {
+			int meta = DyeUtils.rawDyeDamageFromStack(right);
+			if (meta != -1) {
+				ItemStack out = left.copy();
+				String name = event.getName();
+				if (!name.trim().isEmpty())
+					out.setStackDisplayName(name.trim());
+
+				ItemNBTHelper.setInt(out, TAG_DYE, right.getItemDamage());
+				event.setOutput(out);
+				event.setMaterialCost(1);
+				event.setCost(3);
+			}
 		}
 	}
 	

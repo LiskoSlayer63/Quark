@@ -1,19 +1,18 @@
 package vazkii.quark.world.world.underground;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockColored;
-import net.minecraft.block.BlockHardenedClay;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.EnumDyeColor;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import vazkii.quark.base.module.ConfigHelper;
 import vazkii.quark.base.module.ModuleLoader;
 
 public class UndergroundBiomeSlime extends BasicUndergroundBiome {
 
-	int slimeBlockChance;
-	boolean waterFloor;
+	public static double slimeBlockChance;
+	public static boolean waterFloor;
 	
 	public UndergroundBiomeSlime() {
 		super(Blocks.WATER.getDefaultState(), null, null);
@@ -47,13 +46,13 @@ public class UndergroundBiomeSlime extends BasicUndergroundBiome {
 			world.setBlockState(pos, floorState, 3);
 		else fillCeiling(world, pos, state);
 		
-		if(slimeBlockChance > 0 && world.rand.nextInt(slimeBlockChance) == 0)
+		if(world.rand.nextDouble() < slimeBlockChance)
 			world.setBlockState(pos, Blocks.SLIME_BLOCK.getDefaultState());
 	}
 	
 	@Override
 	public void setupConfig(String category) {
-		slimeBlockChance = ModuleLoader.config.getInt("Slime Block Chance", category, 12, 0, Integer.MAX_VALUE, "The higher, the less slime blocks will spawn");
+		slimeBlockChance = ConfigHelper.loadLegacyPropChance("Slime Block Percentage Chance", category, "Slime Block Chance", "The chance slime blocks will spawn", 0.085);
 		waterFloor = ModuleLoader.config.getBoolean("Enable Water Floor", category, true, "");
 	}
 	

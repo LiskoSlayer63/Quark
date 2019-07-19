@@ -1,6 +1,5 @@
 package vazkii.quark.decoration.feature;
 
-import net.minecraft.block.Block;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.passive.EntityPig;
@@ -8,7 +7,6 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.furnace.FurnaceFuelBurnTimeEvent;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.oredict.OreDictionary;
@@ -22,13 +20,13 @@ import vazkii.quark.decoration.item.ItemTallow;
 public class TallowAndCandles extends Feature {
 
 	public static Item tallow;
-	public static Block candle;
+	public static BlockCandle candle;
 	
 	public static boolean candlesFall;
 	public static float enchantPower;
-	
-	boolean enableTallow;
-	int minDrop, maxDrop, candlesCrafted, tallowBurnTime;
+
+	public static boolean enableTallow;
+	public static int minDrop, maxDrop, candlesCrafted, tallowBurnTime;
 	
 	@Override
 	public void setupConfig() {

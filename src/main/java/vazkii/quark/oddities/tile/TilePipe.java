@@ -1,14 +1,7 @@
 package vazkii.quark.oddities.tile;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Random;
-
 import net.minecraft.block.Block;
+import net.minecraft.block.state.BlockFaceShape;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.inventory.IInventory;
@@ -21,30 +14,84 @@ import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumFacing.Axis;
 import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.ITickable;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
 import net.minecraftforge.items.wrapper.InvWrapper;
 import net.minecraftforge.items.wrapper.SidedInvWrapper;
-import scala.actors.threadpool.Arrays;
 import vazkii.arl.block.tile.TileSimpleInventory;
+import vazkii.quark.base.sounds.QuarkSounds;
 import vazkii.quark.oddities.block.BlockPipe;
 import vazkii.quark.oddities.feature.Pipes;
+
+import javax.annotation.Nonnull;
+import java.util.*;
 
 public class TilePipe extends TileSimpleInventory implements ITickable {
 
 	private static final String TAG_PIPE_ITEMS = "pipeItems";
 
-	boolean iterating = false;
-	List<PipeItem> pipeItems = new LinkedList();
-	List<PipeItem> queuedItems = new LinkedList();
+	private boolean needsSync = false;
+	private boolean iterating = false;
+	public final List<PipeItem> pipeItems = new LinkedList<>();
+	public final List<PipeItem> queuedItems = new LinkedList<>();
+
+	@SuppressWarnings("MagicConstant")
+	public static boolean isTheGoodDay(World world) {
+		Calendar calendar = world.getCurrentDate();
+
+		return calendar.get(Calendar.MONTH) + 1 == 4 && calendar.get(Calendar.DAY_OF_MONTH) == 1;
+	}
 
 	@Override
 	public void update() {
 		if(!isPipeEnabled() && world.getTotalWorldTime() % 10 == 0 && world instanceof WorldServer) 
 			((WorldServer) world).spawnParticle(EnumParticleTypes.REDSTONE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 3, 0.2, 0.2, 0.2, 0);
+
+		IBlockState blockAt = world.getBlockState(pos);
+		if (isPipeEnabled() && blockAt.getBlock() instanceof BlockPipe) {
+			IBlockState actualState = blockAt.getActualState(world, pos);
+			for (EnumFacing side : EnumFacing.VALUES) {
+				BlockPos offset = pos.offset(side);
+				if (world.getBlockState(offset).getBlockFaceShape(world, offset, side.getOpposite()) != BlockFaceShape.UNDEFINED)
+					continue;
+
+				if (!world.isRemote && BlockPipe.getType(actualState, side) == BlockPipe.ConnectionType.FLARE) {
+					double minX = pos.getX() + 0.25 + 0.5 * Math.min(0, side.getXOffset());
+					double minY = pos.getY() + 0.25 + 0.5 * Math.min(0, side.getYOffset());
+					double minZ = pos.getZ() + 0.25 + 0.5 * Math.min(0, side.getZOffset());
+					double maxX = pos.getX() + 0.75 + 0.5 * Math.max(0, side.getXOffset());
+					double maxY = pos.getY() + 0.75 + 0.5 * Math.max(0, side.getYOffset());
+					double maxZ = pos.getZ() + 0.75 + 0.5 * Math.max(0, side.getZOffset());
+
+					EnumFacing opposite = side.getOpposite();
+
+					boolean any = false;
+					for (EntityItem item : world.getEntitiesWithinAABB(EntityItem.class,
+							new AxisAlignedBB(minX, minY, minZ, maxX, maxY, maxZ), (entity) -> entity != null &&
+									entity.isEntityAlive() && EnumFacing.getFacingFromVector((float) entity.motionX, (float) entity.motionY, (float) entity.motionZ) == opposite)) {
+						passIn(item.getItem().copy(), side);
+						if (Pipes.doPipesWhoosh) {
+							if (isTheGoodDay(world))
+								world.playSound(null, item.posX, item.posY, item.posZ, QuarkSounds.BLOCK_PIPE_PICKUP_LENNY, SoundCategory.BLOCKS, 1f, 1f);
+							else
+								world.playSound(null, item.posX, item.posY, item.posZ, QuarkSounds.BLOCK_PIPE_PICKUP, SoundCategory.BLOCKS, 1f, 1f);
+						}
+
+						any = true;
+						item.setDead();
+					}
+
+					if (any)
+						sync();
+				}
+			}
+		}
 
 		int currentOut = getComparatorOutput();
 
@@ -57,21 +104,27 @@ public class TilePipe extends TileSimpleInventory implements ITickable {
 
 			ListIterator<PipeItem> itemItr = pipeItems.listIterator();
 			iterating = true;
+			needsSync = false;
 			while(itemItr.hasNext()) {
 				PipeItem item = itemItr.next();
+				EnumFacing lastFacing = item.outgoingFace;
 				if(item.tick(this)) {
+					needsSync = true;
 					itemItr.remove();
 
-					if(item.valid)
+					if (item.valid)
 						passOut(item);
-					else dropItem(item.stack);
+					else {
+						dropItem(item.stack, lastFacing, true);
+					}
 				}
 			}
 			iterating = false;
 
 			pipeItems.addAll(queuedItems);
-			if(!queuedItems.isEmpty())
+			if(needsSync || !queuedItems.isEmpty())
 				sync();
+			needsSync = false;
 			queuedItems.clear();
 		}
 
@@ -111,7 +164,7 @@ public class TilePipe extends TileSimpleInventory implements ITickable {
 		if(tile != null) {
 			if(tile instanceof TilePipe)
 				did = ((TilePipe) tile).passIn(item.stack, item.outgoingFace.getOpposite(), item.rngSeed, item.timeInWorld);
-			else if(!world.isRemote) {
+			else if (!world.isRemote) {
 				ItemStack result = putIntoInv(item.stack, tile, item.outgoingFace.getOpposite(), false);
 				if(result.getCount() != item.stack.getCount()) {
 					did = true;
@@ -125,14 +178,52 @@ public class TilePipe extends TileSimpleInventory implements ITickable {
 			bounceBack(item, null);
 	}
 
-	void bounceBack(PipeItem item, ItemStack stack) {
+	private void bounceBack(PipeItem item, ItemStack stack) {
 		if(!world.isRemote)
 			passIn(stack == null ? item.stack : stack, item.outgoingFace, item.rngSeed, item.timeInWorld);
 	}
 
 	public void dropItem(ItemStack stack) {
+		dropItem(stack, null, false);
+	}
+
+	public void dropItem(ItemStack stack, EnumFacing facing, boolean playSound) {
 		if(!world.isRemote) {
-			EntityItem entity = new EntityItem(world, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, stack);
+			double posX = pos.getX() + 0.5;
+			double posY = pos.getY() + 0.25;
+			double posZ = pos.getZ() + 0.5;
+
+			if (facing != null) {
+				posX -= facing.getXOffset() * 0.4;
+				posY -= facing.getYOffset() * 0.65;
+				posZ -= facing.getZOffset() * 0.4;
+			}
+
+			boolean shootOut = isPipeEnabled();
+
+			float pitch = 1f;
+			if (!shootOut)
+				pitch = 0.025f;
+
+			if (playSound && Pipes.doPipesWhoosh) {
+				if (isTheGoodDay(world))
+					world.playSound(null, posX, posY, posZ, QuarkSounds.BLOCK_PIPE_SHOOT_LENNY, SoundCategory.BLOCKS, 1f, pitch);
+				else
+					world.playSound(null, posX, posY, posZ, QuarkSounds.BLOCK_PIPE_SHOOT, SoundCategory.BLOCKS, 1f, pitch);
+			}
+
+			EntityItem entity = new EntityItem(world, posX, posY, posZ, stack);
+			entity.setDefaultPickupDelay();
+
+			double velocityMod = 0.5;
+			if (!shootOut)
+				velocityMod = 0.125;
+
+			if (facing != null) {
+				entity.motionX = -facing.getXOffset() * velocityMod;
+				entity.motionY = -facing.getYOffset() * velocityMod;
+				entity.motionZ = -facing.getZOffset() * velocityMod;
+			}
 			world.spawnEntity(entity);
 		}
 	}
@@ -196,17 +287,17 @@ public class TilePipe extends TileSimpleInventory implements ITickable {
 			handler = new InvWrapper((IInventory) tile);
 
 		if(handler != null)
-			return simulate ? ItemStack.EMPTY : ItemHandlerHelper.insertItem(handler, stack, simulate);
+			return ItemHandlerHelper.insertItem(handler, stack, simulate);
 		return stack;
 	}
 
 	@Override
-	public boolean canInsertItem(int index, ItemStack itemStackIn, EnumFacing direction) {
+	public boolean canInsertItem(int index, @Nonnull ItemStack itemStackIn, @Nonnull EnumFacing direction) {
 		return index == direction.ordinal() && isPipeEnabled();
 	}
 
 	@Override
-	public void setInventorySlotContents(int i, ItemStack itemstack) {
+	public void setInventorySlotContents(int i, @Nonnull ItemStack itemstack) {
 		if(!itemstack.isEmpty()) {
 			EnumFacing side = EnumFacing.VALUES[i];
 			passIn(itemstack, side);
@@ -236,7 +327,7 @@ public class TilePipe extends TileSimpleInventory implements ITickable {
 
 		public final ItemStack stack;
 		public int ticksInPipe;
-		public EnumFacing incomingFace;
+		public final EnumFacing incomingFace;
 		public EnumFacing outgoingFace;
 		public long rngSeed;
 		public int timeInWorld = 0;
@@ -253,8 +344,12 @@ public class TilePipe extends TileSimpleInventory implements ITickable {
 			ticksInPipe++;
 			timeInWorld++;
 
-			if(ticksInPipe == Pipes.pipeSpeed / 2)
-				outgoingFace = getTargetFace(pipe);
+			if(!pipe.world.isRemote && ticksInPipe == Pipes.pipeSpeed / 2 - 1) {
+				EnumFacing target = getTargetFace(pipe);
+				if (outgoingFace != target)
+					pipe.needsSync = true;
+				outgoingFace = target;
+			}
 
 			if(outgoingFace == null) {
 				valid = false;
@@ -276,7 +371,7 @@ public class TilePipe extends TileSimpleInventory implements ITickable {
 					return incomingOpposite;
 			}
 
-			List<EnumFacing> sides = new ArrayList(HORIZONTAL_SIDES_LIST);
+			List<EnumFacing> sides = new ArrayList<>(HORIZONTAL_SIDES_LIST);
 			sides.remove(incomingFace);
 			sides.remove(incomingOpposite);
 
@@ -294,12 +389,8 @@ public class TilePipe extends TileSimpleInventory implements ITickable {
 			return null;
 		}
 
-		public float getTimeFract(float pticks) {
-			return (float) (ticksInPipe + pticks) / Pipes.pipeSpeed;
-		}
-
-		public float getTimeFract() {
-			return getTimeFract(0F);
+		public float getTimeFract(float partial) {
+			return (ticksInPipe + partial) / Pipes.pipeSpeed;
 		}
 
 		public void writeToNBT(NBTTagCompound cmp) {

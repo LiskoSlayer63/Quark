@@ -10,14 +10,12 @@
  */
 package vazkii.quark.tweaks.feature;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLadder;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
+import net.minecraft.init.SoundEvents;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumFacing;
@@ -26,12 +24,37 @@ import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.ModuleLoader;
 import vazkii.quark.decoration.feature.IronLadders;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
 public class DeployLaddersDown extends Feature {
+
+	private static Method canAttachTo;
+
+	private static boolean canAttachTo(Block ladder, World world, BlockPos pos, EnumFacing facing) {
+		if (ladder == IronLadders.iron_ladder)
+			return IronLadders.iron_ladder.canBlockStay(world, pos, facing);
+		else if (ladder instanceof BlockLadder) {
+			BlockPos attachPos = pos.offset(facing, -1);
+			if (canAttachTo == null)
+				canAttachTo = ObfuscationReflectionHelper.findMethod(BlockLadder.class, "func_193392_c", Boolean.TYPE, World.class, BlockPos.class, EnumFacing.class);
+			try {
+				return (boolean) canAttachTo.invoke(ladder, world, attachPos, facing);
+			} catch (IllegalAccessException | InvocationTargetException e) {
+				// NO-OP
+			}
+		}
+
+		return false;
+	}
 
 	@SubscribeEvent
 	public void onInteract(PlayerInteractEvent.RightClickBlock event) {
@@ -39,7 +62,7 @@ public class DeployLaddersDown extends Feature {
 		EnumHand hand = event.getHand();
 		ItemStack stack = player.getHeldItem(hand);
 
-		List<Item> items = new ArrayList();
+		List<Item> items = new ArrayList<>();
 		items.add(Item.getItemFromBlock(Blocks.LADDER));
 		if(ModuleLoader.isFeatureEnabled(IronLadders.class))
 			items.add(Item.getItemFromBlock(IronLadders.iron_ladder));
@@ -49,7 +72,12 @@ public class DeployLaddersDown extends Feature {
 			World world = event.getWorld();
 			BlockPos pos = event.getPos();
 			while(world.getBlockState(pos).getBlock() == block) {
+				event.setCanceled(true);
 				BlockPos posDown = pos.down();
+
+				if (world.isOutsideBuildHeight(posDown))
+					break;
+
 				IBlockState stateDown = world.getBlockState(posDown);
 
 				if(stateDown.getBlock() == block)
@@ -59,11 +87,9 @@ public class DeployLaddersDown extends Feature {
 						IBlockState copyState = world.getBlockState(pos);
 
 						EnumFacing facing = copyState.getValue(BlockLadder.FACING);
-						if(block.canPlaceBlockOnSide(world, posDown, facing)) {
+						if(canAttachTo(block, world, posDown, facing)) {
 							world.setBlockState(posDown, copyState);
-							world.playSound(null, posDown.getX(), posDown.getY(), posDown.getZ(), Blocks.LADDER.getSoundType().getPlaceSound(), SoundCategory.BLOCKS, 1F, 1F);
-
-							event.setCanceled(true);
+							world.playSound(null, posDown.getX(), posDown.getY(), posDown.getZ(), SoundEvents.BLOCK_LADDER_PLACE, SoundCategory.BLOCKS, 1F, 1F);
 							
 							if(world.isRemote)
 								player.swingArm(hand);

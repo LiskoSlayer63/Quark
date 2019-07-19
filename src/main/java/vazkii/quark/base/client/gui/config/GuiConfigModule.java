@@ -1,29 +1,25 @@
 package vazkii.quark.base.client.gui.config;
 
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.resources.I18n;
+import vazkii.quark.base.module.Feature;
+import vazkii.quark.base.module.Module;
+import vazkii.quark.base.module.ModuleLoader;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.util.text.translation.I18n;
-import vazkii.quark.base.module.ConfigHelper;
-import vazkii.quark.base.module.Feature;
-import vazkii.quark.base.module.GlobalConfig;
-import vazkii.quark.base.module.Module;
-import vazkii.quark.base.module.ModuleLoader;
 
 public class GuiConfigModule extends GuiConfigBase {
 
 	private static final int FEATURES_PER_PAGE = 12;
 	
-	final Module module;
-	final List<Feature> features;
-	int page = 0;
-	int totalPages;
+	private final Module module;
+	private final List<Feature> features;
+	private int page = 0;
+	private final int totalPages;
 	
 	private GuiButton left, right;
 	
@@ -31,22 +27,23 @@ public class GuiConfigModule extends GuiConfigBase {
 		super(parent);
 		this.module = module;
 		
-		features = new ArrayList();
+		features = new ArrayList<>();
 		module.forEachFeature(features::add);
 		Collections.sort(features);
 
 		totalPages = (features.size() - 1) / FEATURES_PER_PAGE + 1;
 	}
 	
+	@Override
 	public void initGui() {
 		super.initGui();
 		
-		title += " - " + I18n.translateToLocal("quark.config.module." + module.name) + " (" + features.size() + ")";
+		title += " - " + I18n.format("quark.config.module." + module.name) + " (" + features.size() + ")";
 
 		int x = width / 2 - 100;
 		int y = height / 6 + 167;
 		
-		buttonList.add(backButton = new GuiButton(0, x, y, 200, 20, I18n.translateToLocal("gui.done")));
+		buttonList.add(backButton = new GuiButton(0, x, y, 200, 20, I18n.format("gui.done")));
 
 		if(totalPages > 1) {
 			x = width / 2;
@@ -58,19 +55,17 @@ public class GuiConfigModule extends GuiConfigBase {
 		addFeatureButtons();
 	}
 
-	void addFeatureButtons() {
+	public void addFeatureButtons() {
 		int startX = width / 2 - 195;
 		int startY = height / 6 + 20;
 		
 		buttonList.removeIf((b) -> b instanceof GuiButtonConfigSetting || b instanceof GuiButtonFeatureSettings);
-		
-		int x = 0, y = 0;
-		
+
 		int start = page * FEATURES_PER_PAGE;
 		for(int i = start; i < Math.min(start + FEATURES_PER_PAGE, features.size()); i++) {
 			int j = i - start;
-			x = startX + j % 2 * 200;
-			y = startY + j / 2 * 22;
+			int x = startX + j % 2 * 200;
+			int y = startY + j / 2 * 22;
 			
 			Feature feature = features.get(i);
 			
@@ -113,7 +108,7 @@ public class GuiConfigModule extends GuiConfigBase {
 		}
 		
 		if(mayRequireRestart) {
-			String s = I18n.translateToLocal("quark.config.needrestart");
+			String s = I18n.format("quark.config.needrestart");
 			drawCenteredString(mc.fontRenderer, s, width / 2, backButton.y + 22, 0xFFFF00);
 		}
 	}

@@ -14,13 +14,12 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.BannerPattern;
 import net.minecraftforge.common.util.EnumHelper;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.module.Feature;
 
 public class MoreBanners extends Feature {
 
-	boolean dragon, eye, shield, sword;
+	public static boolean dragon, eye, shield, sword;
 
 	@Override
 	public void setupConfig() {
@@ -31,7 +30,7 @@ public class MoreBanners extends Feature {
 	}
 
 	@Override
-	public void init(FMLInitializationEvent event) {
+	public void init() {
 		addPattern(dragon, "dragon", "dr", ProxyRegistry.newStack(Items.SKULL, 1, 5));
 		addPattern(eye, "eye", "ey", ProxyRegistry.newStack(Items.ENDER_EYE));
 		addPattern(shield, "shield", "sh", ProxyRegistry.newStack(Items.IRON_CHESTPLATE));
@@ -44,7 +43,7 @@ public class MoreBanners extends Feature {
 
 		name = "quark_" + name;
 		id = "q_" + id;
-		EnumHelper.addEnum(BannerPattern.class, name.toUpperCase(), new Class[] { String.class, String.class, ItemStack.class }, new Object[] { name, id, craftingItem });
+		EnumHelper.addEnum(BannerPattern.class, name.toUpperCase(), new Class[] { String.class, String.class, ItemStack.class }, name, id, craftingItem);
 	}
 	
 	@Override

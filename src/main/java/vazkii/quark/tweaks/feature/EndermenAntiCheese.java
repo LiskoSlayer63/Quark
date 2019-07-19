@@ -10,8 +10,6 @@
  */
 package vazkii.quark.tweaks.feature;
 
-import java.util.List;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityLivingBase;
@@ -23,6 +21,7 @@ import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -32,11 +31,11 @@ import vazkii.quark.base.module.Feature;
 
 public class EndermenAntiCheese extends Feature {
 
-	int minimumDifficulty = 2;
-	boolean oldBehaviour;
-	int delay;
-	int lowerBound;
-	boolean ignoreMobGriefing;
+	public static int minimumDifficulty = 2;
+	public static boolean oldBehaviour;
+	public static int delay;
+	public static int lowerBound;
+	public static boolean ignoreMobGriefing;
 	
 	@Override
 	public void setupConfig() {
@@ -49,7 +48,7 @@ public class EndermenAntiCheese extends Feature {
 
 	@SubscribeEvent
 	public void onUpdate(LivingUpdateEvent event) {
-		if(event.getEntityLiving() instanceof EntityEnderman && event.getEntityLiving().getEntityWorld().getDifficulty().getDifficultyId() >= minimumDifficulty) {
+		if(event.getEntityLiving() instanceof EntityEnderman && event.getEntityLiving().getEntityWorld().getDifficulty().getId() >= minimumDifficulty) {
 			EntityEnderman entity = (EntityEnderman) event.getEntityLiving();
 			
 			if(entity.getHealth() < lowerBound)
@@ -57,12 +56,11 @@ public class EndermenAntiCheese extends Feature {
 
 			BlockPos ourPos = entity.getPosition().up(2);
 			IBlockState ourState = entity.getEntityWorld().getBlockState(ourPos);
-			Block ourBlock = ourState.getBlock();
-			if(ourBlock.getCollisionBoundingBox(ourState, entity.getEntityWorld(), ourPos) != null)
+			if(ourState.getCollisionBoundingBox(entity.getEntityWorld(), ourPos) != null)
 				return;
 
 			EntityLivingBase target = entity.getAttackTarget();
-			if(target != null && target instanceof EntityPlayer && target.onGround) {
+			if(target instanceof EntityPlayer && target.onGround) {
 				BlockPos pos = target.getPosition().up(2);
 				if(pos.getDistance(ourPos.getX(), ourPos.getY(), ourPos.getZ()) > 5)
 					return;
@@ -76,9 +74,8 @@ public class EndermenAntiCheese extends Feature {
 	
 	private void teleportPlayer(EntityEnderman entity, EntityLivingBase target, BlockPos pos) {
 		IBlockState state = entity.getEntityWorld().getBlockState(pos);
-		Block block = state.getBlock();
 
-		if(block.getCollisionBoundingBox(state, entity.getEntityWorld(), pos) != null) {
+		if(state.getCollisionBoundingBox(entity.getEntityWorld(), pos) != null) {
 			for(int i = 0; i < 16; i++)
 				if(target.attemptTeleport(entity.posX + (Math.random() - 0.5) * 2, entity.posY + 0.5, entity.posZ + (Math.random() - 0.5) * 2))
 					break;
@@ -99,9 +96,10 @@ public class EndermenAntiCheese extends Feature {
 		
 		IBlockState state = entity.world.getBlockState(pos);
 		Block block = state.getBlock();
-		boolean unbreakable = block.getBlockHardness(state, entity.world, pos) == -1 || !block.canEntityDestroy(state, entity.world, pos, entity);
-		if(!unbreakable && block.getCollisionBoundingBox(state, entity.getEntityWorld(), pos) != null) {
-			List<ItemStack> drops = block.getDrops(entity.world, pos, state, 0);
+		boolean unbreakable = state.getBlockHardness(entity.world, pos) == -1 || !block.canEntityDestroy(state, entity.world, pos, entity);
+		if(!unbreakable && state.getCollisionBoundingBox(entity.getEntityWorld(), pos) != null) {
+			NonNullList<ItemStack> drops = NonNullList.create();
+			block.getDrops(drops, entity.world, pos, state, 0);
 			entity.world.setBlockToAir(pos);
 			entity.world.playEvent(2001, pos, Block.getStateId(state));
 			

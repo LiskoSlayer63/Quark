@@ -16,7 +16,7 @@ public class GuiBackpackInventory extends GuiInventory {
 	
 	private static final ResourceLocation BACKPACK_INVENTORY_BACKGROUND = new ResourceLocation(LibMisc.MOD_ID, "textures/misc/backpack_gui.png");
 	
-	private EntityPlayer player;
+	private final EntityPlayer player;
 	private GuiButton recipeButton;
 	private int recipeButtonY;
 	
@@ -51,6 +51,7 @@ public class GuiBackpackInventory extends GuiInventory {
 		
 		if(!Backpacks.isEntityWearingBackpack(player)) {
 			ItemStack curr = player.inventory.getItemStack();
+			ContainerBackpack.saveCraftingInventory(player);
 			closeHack = true;
 			NetworkHandler.INSTANCE.sendToServer(new MessageHandleBackpack(false));
 			mc.displayGuiScreen(new GuiInventory(player));
@@ -69,13 +70,13 @@ public class GuiBackpackInventory extends GuiInventory {
 	}
 	
 	@Override
-    protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
-        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-        this.mc.getTextureManager().bindTexture(BACKPACK_INVENTORY_BACKGROUND);
-        int i = this.guiLeft;
-        int j = this.guiTop;
-        this.drawTexturedModalRect(i, j, 0, 0, this.xSize, this.ySize);
-        drawEntityOnScreen(i + 51, j + 75, 30, (float)(i + 51) - mouseX, (float)(j + 75 - 50) - mouseY, this.mc.player);
-    }
+	protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+		GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+		this.mc.getTextureManager().bindTexture(BACKPACK_INVENTORY_BACKGROUND);
+		int i = this.guiLeft;
+		int j = this.guiTop;
+		this.drawTexturedModalRect(i, j, 0, 0, this.xSize, this.ySize);
+		drawEntityOnScreen(i + 51, j + 75, 30, (float)(i + 51) - mouseX, (float)(j + 75 - 50) - mouseY, this.mc.player);
+	}
 	
 }

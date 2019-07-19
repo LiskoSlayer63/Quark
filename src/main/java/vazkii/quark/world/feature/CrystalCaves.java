@@ -1,11 +1,8 @@
 package vazkii.quark.world.feature;
 
 import net.minecraft.block.Block;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.oredict.OreDictionary;
 import vazkii.arl.recipe.RecipeHandler;
 import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.handler.DimensionConfig;
@@ -19,8 +16,8 @@ import vazkii.quark.world.world.CrystalCaveGenerator;
 public class CrystalCaves extends Feature {
 
 	public static Block crystal;
-	
-	DimensionConfig dims;
+
+	public static DimensionConfig dims;
 	public static int crystalCaveRarity;
 	
 	@Override
@@ -39,7 +36,7 @@ public class CrystalCaves extends Feature {
 	}
 	
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {		
+	public void postPreInit() {
 		if(ModuleLoader.isFeatureEnabled(ColorRunes.class)) {
 			addRuneRecipe(0, 0);
 			addRuneRecipe(1, 14);

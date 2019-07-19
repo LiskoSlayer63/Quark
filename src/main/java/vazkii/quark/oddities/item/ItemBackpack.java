@@ -1,13 +1,7 @@
 package vazkii.quark.oddities.item;
 
-import java.util.Map;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.renderer.color.IItemColor;
 import net.minecraft.creativetab.CreativeTabs;
@@ -23,14 +17,11 @@ import net.minecraft.inventory.InventoryHelper;
 import net.minecraft.item.EnumRarity;
 import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
-import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.IRarity;
 import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.capabilities.ICapabilitySerializable;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import net.minecraftforge.items.CapabilityItemHandler;
@@ -38,10 +29,15 @@ import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import vazkii.arl.interf.IItemColorProvider;
 import vazkii.arl.item.ItemModArmor;
+import vazkii.arl.util.ItemNBTHelper;
+import vazkii.quark.base.handler.ProxiedItemStackHandler;
 import vazkii.quark.base.item.IQuarkItem;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.oddities.client.model.ModelBackpack;
 import vazkii.quark.oddities.feature.Backpacks;
+
+import javax.annotation.Nonnull;
+import java.util.Map;
 
 public class ItemBackpack extends ItemModArmor implements IQuarkItem, IItemColorProvider {
 
@@ -61,6 +57,8 @@ public class ItemBackpack extends ItemModArmor implements IQuarkItem, IItemColor
 	
 	public static boolean doesBackpackHaveItems(ItemStack stack) {
 		IItemHandler handler = stack.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null);
+		if (handler == null)
+			return false;
 		for(int i = 0; i < handler.getSlots(); i++)
 			if(!handler.getStackInSlot(i).isEmpty())
 				return true;
@@ -68,10 +66,11 @@ public class ItemBackpack extends ItemModArmor implements IQuarkItem, IItemColor
 		return false;
 	}
 	
+	@Nonnull
 	@Override
-    public Multimap<String, AttributeModifier> getItemAttributeModifiers(EntityEquipmentSlot equipmentSlot) {
-        return HashMultimap.create();
-    }
+	public Multimap<String, AttributeModifier> getItemAttributeModifiers(@Nonnull EntityEquipmentSlot equipmentSlot) {
+		return HashMultimap.create();
+	}
 	
 	@Override
 	public void onUpdate(ItemStack stack, World worldIn, Entity entityIn, int itemSlot, boolean isSelected) {
@@ -110,16 +109,26 @@ public class ItemBackpack extends ItemModArmor implements IQuarkItem, IItemColor
 			return false;
 		
 		ItemStack stack = entityItem.getItem();
+
+		if (!ItemNBTHelper.detectNBT(stack))
+			return false;
 		
 		IItemHandler handler = stack.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, null);
+		if (handler == null)
+			return false;
+
 		for(int i = 0; i < handler.getSlots(); i++) {
 			ItemStack stackAt = handler.getStackInSlot(i);
 			if(!stackAt.isEmpty()) {
 				ItemStack copy = stackAt.copy();
-				stackAt.setCount(0);
 				InventoryHelper.spawnItemStack(entityItem.world, entityItem.posX, entityItem.posY, entityItem.posZ, copy);
 			}
 		}
+
+		NBTTagCompound comp = ItemNBTHelper.getNBT(stack);
+		comp.removeTag("Inventory");
+		if (comp.getSize() == 0)
+			stack.setTagCompound(null);
 		
 		return false;
 	}
@@ -143,56 +152,38 @@ public class ItemBackpack extends ItemModArmor implements IQuarkItem, IItemColor
 		return false;
 	}
 	
+	@Nonnull
 	@Override
-    public EnumRarity getRarity(ItemStack stack) {
-        return EnumRarity.COMMON;
-    }
+	public IRarity getForgeRarity(@Nonnull ItemStack stack) {
+		return EnumRarity.COMMON;
+	}
 	
 	@Override
-	public boolean isEnchantable(ItemStack stack) {
+	public boolean isEnchantable(@Nonnull ItemStack stack) {
 		return false;
 	}
 
 	@Nonnull
 	@Override
 	public ICapabilityProvider initCapabilities(ItemStack stack, NBTTagCompound oldCapNbt) {
-		return new InvProvider();
-	}
+		ProxiedItemStackHandler handler = new ProxiedItemStackHandler(stack, 27);
 
-	private static class InvProvider implements ICapabilitySerializable<NBTBase> {
+		if (oldCapNbt != null && oldCapNbt.hasKey("Parent")) {
+			NBTTagCompound itemData = oldCapNbt.getCompoundTag("Parent");
+			ItemStackHandler stacks = new ItemStackHandler();
+			stacks.deserializeNBT(itemData);
 
-		private final IItemHandler inv = new ItemStackHandler(27) {
-			@Nonnull
-			@Override
-			public ItemStack insertItem(int slot, @Nonnull ItemStack toInsert, boolean simulate) {
-				return super.insertItem(slot, toInsert, simulate);
-			}
-		};
+			for (int i = 0; i < stacks.getSlots(); i++)
+				handler.setStackInSlot(i, stacks.getStackInSlot(i));
 
-		@Override
-		public boolean hasCapability(@Nonnull Capability<?> capability, @Nullable EnumFacing facing) {
-			return capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY;
+			oldCapNbt.removeTag("Parent");
 		}
 
-		@Override
-		public <T> T getCapability(@Nonnull Capability<T> capability, @Nullable EnumFacing facing) {
-			if(capability == CapabilityItemHandler.ITEM_HANDLER_CAPABILITY)
-				return CapabilityItemHandler.ITEM_HANDLER_CAPABILITY.cast(inv);
-			else return null;
-		}
-
-		@Override
-		public NBTBase serializeNBT() {
-			return CapabilityItemHandler.ITEM_HANDLER_CAPABILITY.writeNBT(inv, null);
-		}
-
-		@Override
-		public void deserializeNBT(NBTBase nbt) {
-			CapabilityItemHandler.ITEM_HANDLER_CAPABILITY.readNBT(inv, null, nbt);
-		}
+		return handler;
 	}
 
 	@Override
+	@SideOnly(Side.CLIENT)
 	public IItemColor getItemColor() {
 		return (stack, i) -> i == 1 ? ((ItemArmor) stack.getItem()).getColor(stack) : -1;
 	}

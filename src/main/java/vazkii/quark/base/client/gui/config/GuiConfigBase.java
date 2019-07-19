@@ -1,30 +1,30 @@
 package vazkii.quark.base.client.gui.config;
 
+import net.minecraft.client.gui.GuiButton;
+import net.minecraft.client.gui.GuiConfirmOpenLink;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.resources.I18n;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraftforge.common.config.Property;
+import vazkii.quark.base.Quark;
+import vazkii.quark.base.module.ModuleLoader;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.LinkedList;
 import java.util.List;
 
-import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiConfirmOpenLink;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.util.text.TextFormatting;
-import net.minecraft.util.text.translation.I18n;
-import net.minecraftforge.common.config.Property;
-import net.minecraftforge.fml.common.FMLLog;
-import vazkii.quark.base.lib.LibMisc;
-import vazkii.quark.base.module.ModuleLoader;
-
 public class GuiConfigBase extends GuiScreen {
 
-	String title;
-	GuiScreen parent;
+	protected String title;
+	protected final GuiScreen parent;
 	
-	private static List<Property> restartRequiringProperties = new LinkedList();
+	private static final List<Property> restartRequiringProperties = new LinkedList<>();
 	public static boolean mayRequireRestart = false;
 
-	GuiButton backButton;
+	public GuiButton backButton;
+	public String targetUrl;
 
 	public GuiConfigBase(GuiScreen parent) {
 		this.parent = parent;
@@ -35,7 +35,7 @@ public class GuiConfigBase extends GuiScreen {
 		super.initGui();
 		
 		buttonList.clear();
-		title = I18n.translateToLocal("quark.config.title");
+		title = I18n.format("quark.config.title");
 	}
 
 	@Override
@@ -81,6 +81,7 @@ public class GuiConfigBase extends GuiScreen {
 	}
 
 	void tryOpenWebsite(String url) {
+		targetUrl = url;
 		GuiConfirmOpenLink gui = new GuiConfigLink(this, url);
 		mc.displayGuiScreen(gui);
 	}
@@ -90,7 +91,7 @@ public class GuiConfigBase extends GuiScreen {
 		if(id == 0) {
 			try {
 				if (result)
-					openWebLink(new URI(LibMisc.MOD_WEBSITE));
+					openWebLink(new URI(targetUrl));
 			} catch (URISyntaxException e) {
 				e.printStackTrace();
 			}
@@ -101,12 +102,12 @@ public class GuiConfigBase extends GuiScreen {
 
 	private void openWebLink(URI url) {
 		try {
-			Class<?> oclass = Class.forName("java.awt.Desktop");
-			Object object = oclass.getMethod("getDesktop").invoke((Object)null);
-			oclass.getMethod("browse", URI.class).invoke(object, url);
+			Class<?> desktopClass = Class.forName("java.awt.Desktop");
+			Object object = desktopClass.getMethod("getDesktop").invoke(null);
+			desktopClass.getMethod("browse", URI.class).invoke(object, url);
 		} catch(Throwable throwable1) {
 			Throwable throwable = throwable1.getCause();
-			FMLLog.warning("Couldn't open link: {}", (Object)(throwable == null ? "<UNKNOWN>" : throwable.getMessage()));
+			Quark.LOG.warn("Couldn't open link: {}", (throwable == null ? "<UNKNOWN>" : throwable.getMessage()));
 		}
 	}
 

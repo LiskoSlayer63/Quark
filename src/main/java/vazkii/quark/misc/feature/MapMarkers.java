@@ -2,7 +2,6 @@ package vazkii.quark.misc.feature;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
-import net.minecraft.item.ItemMap;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.storage.MapData;
 import net.minecraft.world.storage.MapDecoration.Type;
@@ -18,8 +17,8 @@ import vazkii.quark.misc.recipe.MapPinningRecipe;
 public class MapMarkers extends Feature {
 
 	public static final String TAG_ADD_PIN = "quark:needs_pin";
-	
-	boolean useRightClick;
+
+	public static boolean useRightClick;
 	
 	@Override
 	public void setupConfig() {
@@ -64,10 +63,10 @@ public class MapMarkers extends Feature {
 	
 	public static void addMarker(ItemStack stack, EntityPlayer player) {
 		if(stack.getItem() == Items.FILLED_MAP) {
-			MapData data = ((ItemMap) Items.FILLED_MAP).getMapData(stack, player.world);
+			MapData data = Items.FILLED_MAP.getMapData(stack, player.world);
 			
 			if(data != null)
-				data.addTargetDecoration(stack, player.getPosition(), "Pin" + player.getPosition().hashCode(), Type.TARGET_X);
+				MapData.addTargetDecoration(stack, player.getPosition(), "Pin" + player.getPosition().hashCode(), Type.TARGET_X);
 		}
 	}
 	

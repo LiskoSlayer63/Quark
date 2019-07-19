@@ -1,7 +1,5 @@
 package vazkii.quark.decoration.block;
 
-import java.util.Random;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.properties.IProperty;
 import net.minecraft.block.state.IBlockState;
@@ -17,19 +15,17 @@ import net.minecraft.item.EnumDyeColor;
 import net.minecraft.item.EnumRarity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.arl.interf.IBlockColorProvider;
 import vazkii.arl.interf.IRecipeGrouped;
-import vazkii.arl.item.ItemModBlock;
-import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.block.IQuarkBlock;
-import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.decoration.client.state.ColoredFlowerPotStateMapper;
+
+import javax.annotation.Nonnull;
+import java.util.Random;
 
 public class BlockColoredFlowerPot extends BlockCustomFlowerPot implements IQuarkBlock, IBlockColorProvider, IRecipeGrouped {
 
@@ -42,36 +38,39 @@ public class BlockColoredFlowerPot extends BlockCustomFlowerPot implements IQuar
 		bareName = name;
 
 		setCreativeTab(CreativeTabs.DECORATIONS);
-		setUnlocalizedName(name);
+		setTranslationKey(name);
 	}
 
+	@Nonnull
 	@Override
-	public Block setUnlocalizedName(String name) {
-		super.setUnlocalizedName(name);
-		setRegistryName(LibMisc.PREFIX_MOD + name);
-		ProxyRegistry.register(this);
-		ProxyRegistry.register(new ItemModBlock(this, new ResourceLocation(LibMisc.PREFIX_MOD + name)));
+	public Block setTranslationKey(@Nonnull String name) {
+		super.setTranslationKey(name);
+		register(name);
 		return this;
 	}
 	
+	@Nonnull
 	@Override
-    public ItemStack getItem(World worldIn, BlockPos pos, IBlockState state) {
-        ItemStack stack = super.getItem(worldIn, pos, state);
-        if(stack.getItem() == Items.FLOWER_POT)
-        	stack = new ItemStack(Item.getItemFromBlock(this));
-        
-        return stack;
-    }
+	public ItemStack getItem(World worldIn, @Nonnull BlockPos pos, IBlockState state) {
+		ItemStack stack = super.getItem(worldIn, pos, state);
+		if(stack.getItem() == Items.FLOWER_POT)
+			stack = new ItemStack(Item.getItemFromBlock(this));
 
+		return stack;
+	}
+
+	@Nonnull
 	@Override
-    public Item getItemDropped(IBlockState state, Random rand, int fortune) {
+	public Item getItemDropped(IBlockState state, Random rand, int fortune) {
 		return Item.getItemFromBlock(this);
 	}
-	
+
+	@Nonnull
 	@Override
-    public String getLocalizedName() {
-        return I18n.translateToLocal(getUnlocalizedName() + ".name");
-    }
+	@SuppressWarnings("deprecation")
+	public String getLocalizedName() {
+		return net.minecraft.util.text.translation.I18n.translateToLocal(getTranslationKey() + ".name");
+	}
 	
 	@Override
 	public String getBareName() {

@@ -16,6 +16,8 @@ import vazkii.arl.item.ItemMod;
 import vazkii.quark.base.item.IQuarkItem;
 import vazkii.quark.misc.entity.EntityParrotEgg;
 
+import javax.annotation.Nonnull;
+
 public class ItemParrotEgg extends ItemMod implements IQuarkItem, IItemColorProvider {
 
 	private static final String[] VARIANTS = {
@@ -50,8 +52,10 @@ public class ItemParrotEgg extends ItemMod implements IQuarkItem, IItemColorProv
 		return "parrot_egg";
 	}
 
+	@Nonnull
 	@Override
-	public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer playerIn, EnumHand handIn) {
+	@SuppressWarnings("ConstantConditions")
+	public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer playerIn, @Nonnull EnumHand handIn) {
 		ItemStack itemstack = playerIn.getHeldItem(handIn);
 
 		if(!playerIn.capabilities.isCreativeMode)
@@ -66,7 +70,7 @@ public class ItemParrotEgg extends ItemMod implements IQuarkItem, IItemColorProv
 		}
 
 		playerIn.addStat(StatList.getObjectUseStats(this));
-		return new ActionResult<ItemStack>(EnumActionResult.SUCCESS, itemstack);
+		return new ActionResult<>(EnumActionResult.SUCCESS, itemstack);
 	}
 
 

@@ -10,27 +10,29 @@
  */
 package vazkii.quark.base.module;
 
-import org.apache.commons.io.input.ProxyReader;
-import org.apache.commons.lang3.text.WordUtils;
-
 import net.minecraft.block.Block;
+import net.minecraft.enchantment.Enchantment;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.config.Property;
 import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.registry.GameRegistry;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import net.minecraftforge.oredict.OreDictionary;
+import net.minecraftforge.registries.IForgeRegistryEntry;
+import org.apache.commons.lang3.text.WordUtils;
 import vazkii.arl.util.ProxyRegistry;
+import vazkii.quark.api.module.IFeature;
+import vazkii.quark.api.module.IModule;
 import vazkii.quark.base.lib.LibMisc;
 
-public class Feature implements Comparable<Feature> {
+import java.util.List;
+
+public class Feature implements IFeature {
 
 	public Module module;
 	
@@ -49,13 +51,13 @@ public class Feature implements Comparable<Feature> {
 	public final void setupConstantConfig() {
 		String[] incompat = getIncompatibleMods();
 		if(incompat != null && incompat.length > 0) {
-			String desc = "This feature disables itself if any of the following mods are loaded: \n";
+			StringBuilder desc = new StringBuilder("This feature disables itself if any of the following mods are loaded: \n");
 			for(String s : incompat)
-				desc += (" - " + s + "\n");
-			desc += "This is done to prevent content overlap.\nYou can turn this on to force the feature to be loaded even if the above mods are also loaded.";
+				desc.append(" - ").append(s).append("\n");
+			desc.append("This is done to prevent content overlap.\nYou can turn this on to force the feature to be loaded even if the above mods are also loaded.");
 				
 			ConfigHelper.needsRestart = true;
-			forceLoad = loadPropBool("Force Enabled", desc, false);
+			forceLoad = loadPropBool("Force Enabled", desc.toString(), false);
 		}
 	}
 	
@@ -75,38 +77,39 @@ public class Feature implements Comparable<Feature> {
 		// NO-OP
 	}
 	
-	public void postPreInit(FMLPreInitializationEvent event) {
+	public void postPreInit() {
 		// NO-OP
 	}
 
-	public void init(FMLInitializationEvent event) {
+	public void init() {
 		// NO-OP
 	}
 
-	public void postInit(FMLPostInitializationEvent event) {
+	public void postInit() {
 		// NO-OP
 	}
 	
-	public void finalInit(FMLPostInitializationEvent event) {
+	public void finalInit() {
 		// NO-OP
 	}
 
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		// NO-OP
 	}
 
 	@SideOnly(Side.CLIENT)
-	public void initClient(FMLInitializationEvent event) {
+	public void initClient() {
 		// NO-OP
 	}
 
 	@SideOnly(Side.CLIENT)
-	public void postInitClient(FMLPostInitializationEvent event) {
+	public void postInitClient() {
 		// NO-OP
 	}
 
-	public void serverStarting(FMLServerStartingEvent event) {
+	@SuppressWarnings({"unused", "EmptyMethod"})
+	public void serverStarting() {
 		// NO-OP
 	}
 	
@@ -139,7 +142,7 @@ public class Feature implements Comparable<Feature> {
 	}
 
 	public static void registerTile(Class<? extends TileEntity> clazz, String key) {
-		GameRegistry.registerTileEntity(clazz, LibMisc.PREFIX_MOD + key);
+		GameRegistry.registerTileEntity(clazz, new ResourceLocation(LibMisc.MOD_ID, key));
 	}
 	
 	public static void addOreDict(String key, Item value) {
@@ -156,6 +159,10 @@ public class Feature implements Comparable<Feature> {
 
 	public final boolean isClient() {
 		return FMLCommonHandler.instance().getSide().isClient();
+	}
+
+	public final boolean hasConfigKey(String propName) {
+		return ConfigHelper.hasConfigKey(propName, configCategory);
 	}
 
 	public final int loadPropInt(String propName, String desc, int default_) {
@@ -178,8 +185,41 @@ public class Feature implements Comparable<Feature> {
 		return ConfigHelper.loadPropStringList(propName, configCategory, desc, default_);
 	}
 
+	public final double loadPropChance(String propName,String desc, double default_) {
+		return ConfigHelper.loadPropChance(propName, configCategory, desc, default_);
+	}
+
+	public final double loadLegacyPropChance(String propName, String oldName, String desc, double default_) {
+		return ConfigHelper.loadLegacyPropChance(propName, configCategory, oldName, desc, default_);
+	}
+
+	public final void initializeEnchantmentList(String[] enchantNames, List<Enchantment> enchants) {
+		enchants.clear();
+		for(String s : enchantNames) {
+			ResourceLocation r = new ResourceLocation(s);
+			Enchantment e = Enchantment.REGISTRY.getObject(r);
+			if(e != null)
+				enchants.add(e);
+		}
+	}
+
+	public static boolean isVanilla(IForgeRegistryEntry entry) {
+		ResourceLocation loc = entry.getRegistryName();
+		return loc != null && loc.getNamespace().equals("minecraft");
+	}
+
 	@Override
-	public int compareTo(Feature o) {
-		return configName.compareTo(o.configName);
+	public IModule getModule() {
+		return module;
+	}
+
+	@Override
+	public boolean isEnabled() {
+		return enabled;
+	}
+
+	@Override
+	public String getName() {
+		return configName;
 	}
 }

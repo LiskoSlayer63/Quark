@@ -12,22 +12,24 @@ package vazkii.quark.vanity.client.emotes;
 
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.entity.player.EntityPlayer;
-import vazkii.arl.util.ClientTicker;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.aurelienribon.tweenengine.Timeline;
 import vazkii.aurelienribon.tweenengine.TweenManager;
 
+@SideOnly(Side.CLIENT)
 public abstract class EmoteBase {
 
 	public static final float PI_F = (float) Math.PI;
 
 	public final EmoteDescriptor desc;
-	
-	TweenManager emoteManager;
-	private ModelBiped model;
-	private ModelBiped armorModel;
-	private ModelBiped armorLegsModel;
-	private EmoteState state;
-	private EntityPlayer player;
+
+	private final TweenManager emoteManager;
+	private final ModelBiped model;
+	private final ModelBiped armorModel;
+	private final ModelBiped armorLegsModel;
+	private final EmoteState state;
+	private final EntityPlayer player;
 	
 	public float timeDone, totalTime, animatedTime;
 	private long lastMs;
@@ -57,6 +59,10 @@ public abstract class EmoteBase {
 	public abstract Timeline getTimeline(EntityPlayer player, ModelBiped model);
 
 	public abstract boolean usesBodyPart(int part);
+
+	public void rotateAndOffset() {
+		state.rotateAndOffset(player);
+	}
 
 	public void update() {
 		state.load(model);

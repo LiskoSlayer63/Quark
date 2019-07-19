@@ -1,7 +1,5 @@
 package vazkii.quark.automation.feature;
 
-import java.util.List;
-
 import net.minecraft.block.BlockPistonExtension;
 import net.minecraft.block.BlockPistonExtension.EnumPistonType;
 import net.minecraft.block.state.IBlockState;
@@ -17,9 +15,11 @@ import net.minecraft.world.WorldServer;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.ModuleLoader;
 
+import java.util.List;
+
 public class PistonsPushPullItems extends Feature {
 
-	static float force = 0.48F;
+	public static float force = 0.48F;
 
 	@Override
 	public void setupConfig() {
@@ -52,19 +52,22 @@ public class PistonsPushPullItems extends Feature {
 		World world = entity.getEntityWorld();
 		if(sticky) {
 			BlockPos offsetPos = entity.getPosition().offset(face);
-			boolean closeToEdge = new BlockPos(entity.posX + face.getFrontOffsetX() * .5, entity.posY + face.getFrontOffsetY() * .5, entity.posZ + face.getFrontOffsetZ() * .5).equals(offsetPos);
+			boolean closeToEdge = new BlockPos(entity.posX + face.getXOffset() * .5, entity.posY + face.getYOffset() * .5, entity.posZ + face.getZOffset() * .5).equals(offsetPos);
 			if(closeToEdge)
 				nudgeItem(world, entity, face, false);
 		} else nudgeItem(world, entity, face, true);
 	}
 
 	private static void nudgeItem(World world, EntityItem entity, EnumFacing whichWay, boolean showParticles) {
-		float x = force * whichWay.getFrontOffsetX();
-		float y = force * whichWay.getFrontOffsetY();
-		float z = force * whichWay.getFrontOffsetZ();
+		float x = force * whichWay.getXOffset();
+		float y = force * whichWay.getYOffset() * 1.5f;
+		float z = force * whichWay.getZOffset();
 		float px = x == 0 ? 0.4F : 0;
 		float py = y == 0 ? 0.4F : 0;
 		float pz = z == 0 ? 0.4F : 0;
+		entity.setPosition(entity.posX + 0.5 * whichWay.getXOffset(),
+				entity.posY + 0.5 * whichWay.getYOffset(),
+				entity.posZ + 0.5 * whichWay.getZOffset());
 		entity.addVelocity(x, y, z);
 		if(showParticles && world instanceof WorldServer)
 			((WorldServer) world).spawnParticle(EnumParticleTypes.CRIT, entity.posX, entity.posY, entity.posZ, 12, px, py, pz, 0);

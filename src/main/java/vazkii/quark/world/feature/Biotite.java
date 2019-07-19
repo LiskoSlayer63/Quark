@@ -10,31 +10,31 @@
  */
 package vazkii.quark.world.feature;
 
-import java.util.Random;
-
 import net.minecraft.block.Block;
 import net.minecraft.entity.boss.EntityDragon;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.FurnaceRecipes;
 import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.event.entity.living.LivingEvent.LivingUpdateEvent;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.oredict.OreDictionary;
 import vazkii.arl.block.BlockModSlab;
 import vazkii.arl.block.BlockModStairs;
 import vazkii.arl.recipe.RecipeHandler;
 import vazkii.arl.util.ProxyRegistry;
+import vazkii.quark.base.block.BlockQuarkStairs;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.GlobalConfig;
 import vazkii.quark.building.feature.VanillaWalls;
 import vazkii.quark.world.block.BlockBiotite;
 import vazkii.quark.world.block.BlockBiotiteOre;
 import vazkii.quark.world.block.slab.BlockBiotiteSlab;
-import vazkii.quark.world.block.stairs.BlockBiotiteStairs;
 import vazkii.quark.world.item.ItemBiotite;
 import vazkii.quark.world.world.BiotiteGenerator;
+
+import java.util.Random;
 
 public class Biotite extends Feature {
 
@@ -43,17 +43,17 @@ public class Biotite extends Feature {
 
 	public static Item biotite;
 
-	public static boolean generateNatually;
-	boolean generateByDragon;
-	boolean enableWalls;
-	int clusterSize, clusterCount;
-	int generationDelay;
-	int clustersPerTick;
+	public static boolean generateNaturally;
+	public static boolean generateByDragon;
+	public static boolean enableWalls;
+	public static int clusterSize, clusterCount;
+	public static int generationDelay;
+	public static int clustersPerTick;
 
 	@Override
 	public void setupConfig() {
 		enableWalls = loadPropBool("Enable walls", "", true) && GlobalConfig.enableVariants;
-		generateNatually = loadPropBool("Generate naturally", "", false);
+		generateNaturally = loadPropBool("Generate naturally", "", false);
 		generateByDragon = loadPropBool("Generate by dragon kill", "", true);
 		clusterSize = loadPropInt("Cluster size", "", 14);
 		clusterCount = loadPropInt("Cluster count for natural generation", "", 16);
@@ -70,7 +70,7 @@ public class Biotite extends Feature {
 
 		BlockModSlab singleSlab = new BlockBiotiteSlab(false);
 		BlockModSlab.initSlab(biotite_block, 0, singleSlab, new BlockBiotiteSlab(true));
-		BlockModStairs.initStairs(biotite_block, 0, new BlockBiotiteStairs());
+		BlockModStairs.initStairs(biotite_block, 0, new BlockQuarkStairs("biotite_stairs", biotite_block.getDefaultState()));
 
 		VanillaWalls.add("biotite", biotite_block, 0, enableWalls);
 
@@ -90,7 +90,12 @@ public class Biotite extends Feature {
 		
 		addOreDict("gemEnderBiotite", biotite);
 	}
-	
+
+	@Override
+	public void postInit() {
+		FurnaceRecipes.instance().addSmelting(Item.getItemFromBlock(biotite_ore), new ItemStack(biotite), 1);
+	}
+
 	@SubscribeEvent
 	public void onEntityTick(LivingUpdateEvent event) {
 		if(generateByDragon && event.getEntityLiving() instanceof EntityDragon && !event.getEntity().getEntityWorld().isRemote) {

@@ -9,8 +9,12 @@ import vazkii.quark.decoration.block.BlockIronLadder;
 
 public class IronLadders extends Feature {
 
-	public static Block iron_ladder;
-	
+	public static BlockIronLadder iron_ladder;
+
+	public static boolean isBlockNotBrokenByWater(Block block) {
+		return block == iron_ladder;
+	}
+
 	@Override
 	public void preInit(FMLPreInitializationEvent event) {
 		iron_ladder = new BlockIronLadder();

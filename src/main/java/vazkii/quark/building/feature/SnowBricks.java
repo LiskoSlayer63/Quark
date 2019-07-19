@@ -28,8 +28,8 @@ public class SnowBricks extends Feature {
 
 	public static Block snow_bricks;
 
-	boolean enableStairsAndSlabs;
-	boolean enableWalls;
+	public static boolean enableStairsAndSlabs;
+	public static boolean enableWalls;
 
 	@Override
 	public void setupConfig() {
@@ -45,7 +45,7 @@ public class SnowBricks extends Feature {
 			BlockModStairs.initStairs(snow_bricks, 0, new BlockSnowBricksStairs());
 			BlockModSlab.initSlab(snow_bricks, 0, new BlockSnowBricksSlab(false), new BlockSnowBricksSlab(true));
 		}
-		VanillaWalls.add("snow_bricks", snow_bricks, 0, enableWalls, (name, state) -> new BlockSnowBricksWall(name, state));
+		VanillaWalls.add("snow_bricks", snow_bricks, 0, enableWalls, BlockSnowBricksWall::new);
 
 		RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(snow_bricks, 4),
 				"SS", "SS",

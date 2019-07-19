@@ -293,6 +293,13 @@
 				"description":"Crafting a 3x3 of any sort of the world stone types will make Pavement. This block is inspired by the Portuguese sidewalks, and is awesome for that very purpose.<br><br>For extra fun, these are designed to look amazing with the Chisels & Bits mod, so go ahead and make some crazy patterns.",
 				"image":"pavement.jpg",
 				"introduced":12
+			},
+			{
+				"name":"Turf",
+				"classname":"Turf",
+				"description":"Turf Blocks can be crafted using a few bits of Tall Grass.<br><br>These blocks have the grass texture and coloring on all sides, are available in stair and slab variants, and do not decay when a block is on top.",
+				"image":"turf.jpg",
+				"introduced":12
 			}
 		]
 	},
@@ -452,6 +459,13 @@
 				"description":"You can now make Buttons and Pressure Plates out of all wood types. They act exactly the same to the oak wood counterparts.<br><br><i>This feature was added as a backport of a 1.13 feature, and will be removed upon the release of 1.13</i>",
 				"image":"pressure-plates-buttons.jpg",
 				"introduced":12
+			},
+			{
+				"name":"Tie Leads to Fences",
+				"classname":"TieFences",
+				"description":"Right click a Lead onto a Fence to tie the Lead to it, after this just right click on another fence to make a connection. This allows you to use the fence look at will without needing mobs.",
+				"image":"tie-leads.jpg",
+				"introduced":12
 			}
 		]
 	},
@@ -523,6 +537,14 @@
 				"description":"Pressing the Z key (X pre 1.12, rebindable) will show your entire inventory above your hotbar. You can then press 1, 2, or 3, to switch that respective inventory row with your hotbar. Pressing X again will hide the 3 additional rows with no change.",
 				"image":"hotbar-changer.jpg",
 				"introduced":11
+			},
+			{
+				"name": "Arrow Scrolling",
+				"classname": "RotateArrowTypes",
+				"description": "While sneaking and holding a bow, scrolling will cycle arrow positions in your inventory.",
+				"image": "arrow-scrolling.jpg",
+				"introduced": 12,
+				"contributor": "WireSegal"
 			},
 			{
 				"name":"Auto Tool Restock",
@@ -790,10 +812,34 @@
 				"introduced":12
 			},
 			{
+				"name":"Pat the Dogs",
+				"classname":"PatTheDogs",
+				"description":"You can pat the dogs. Sneak-click them with an empty hand to perform this glorious act.",
+				"image":"pat-the-dogs.jpg",
+				"introduced":12
+			},
+			{
+				"name":"Right Click Harvesting",
+				"classname":"RightClickHarvest",
+				"description":"Right click crops to harvest. Works with Hoe Harvesting, if enabled.",
+				"image":"right-click-harvest.jpg",
+				"introduced":12,
+				"contributor": "WireSegal",
+				"overlap": [ "harvest" ]
+			},
+			{
 				"name":"Squid Inking",
 				"classname":"SquidsInkYou",
 				"description":"Upon being attacked, Squids will release some ink, which inflicts blindness on nearby players.",
 				"image":"squid-inking.jpg",
+				"introduced":12
+			},
+			{
+				"name":"Springy Slime",
+				"classname":"SpringySlime",
+				"description":"Slime Blocks will now bounce entities that hit them from the side rather than just the top. Furthermore, items will also bounce on them.",
+				"image":"springy-slime.jpg",
+				"contributor": "WireSegal",
 				"introduced":12
 			}
 		]
@@ -924,7 +970,7 @@
 			{
 				"name":"Guardians in Oceans",
 				"classname":"OceanGuardians",
-				"description":"Guardians spawn naturally in Deep Oceans, rarely. See the previous feature.<br><br>If this feature is enabled, the Guardian sound is changed to not ignore distance for its volume (it does so in vanilla), so it's no longer a massive pain if you live near the ocean, or an ocean monument.",
+				"description":"Guardians spawn naturally in Deep Oceans, rarely.<br><br>If this feature is enabled, the Guardian sound is changed to not ignore distance for its volume (it does so in vanilla), so it's no longer a massive pain if you live near the ocean, or an ocean monument.",
 				"image":"ocean-guardians.jpg",
 				"introduced":9
 			},
@@ -961,7 +1007,7 @@
 			{
 				"name":"Wraiths and Curses",
 				"classname":"Wraiths",
-				"description":"Wraiths are mobs that will spawn rarely in the nether, on Soul Sand. They spawn in packs and attack like a Zombie, albiet moving faster. When they strike their target, they inflict a short Slowness debuff and knock themselves back. Fighting them standing still is a bad idea. They also don't have their own sounds, instead appropriating other mobs' sounds.<br><br>Wraiths drop a Soul Bead item. Right clicking it will break it, and inflict a Curse debuff on the player for 20 minutes. Mobs in a 64 block radius of a player with Curse will spawn ignoring light levels and other conditions (like slime chunk restrictions). Curse can not be cleansed with Milk.",
+				"description":"Wraiths are mobs that will spawn rarely in the nether, on Soul Sand. They spawn in packs and attack like a Zombie, albiet moving faster. When they strike their target, they inflict a short Slowness debuff and knock themselves back. Fighting them standing still is a bad idea. They also don't have their own sounds, instead appropriating other mobs' sounds.<br><br>Wraiths drop a Soul Bead item. Right clicking it will break it, and inflict a Curse debuff on the player for 10 minutes (by default). Mobs in a 64 block radius of a player with Curse will spawn ignoring light levels and other conditions (like slime chunk restrictions).",
 				"image":"wraiths.jpg",
 				"introduced":10
 			},
@@ -1002,10 +1048,46 @@
 				"introduced":12
 			},
 			{
+				"name":"Frogs",
+				"classname":"Frogs",
+				"description":"Cute little guys who spawn in swamps. They eat fish and spider eyes, and their legs can be cooked, or gilded to brew Jump Boost.",
+				"image":"frogs.jpg",
+				"introduced":12,
+				"contributor":"WireSegal"
+			},
+			{
 				"name": "Speleothems",
 				"classname":"Speleothems",
 				"description":"Speleothems (commonly known as Stalactites and Salagmites) will generate in caves and the Nether, in all stone type variants. These can be harvested only with Silk Touch (or crafted, if you want), and can grow up to 3 blocks high.<br><br>If you break the supporting blocks, the rest of the structure falls apart, which is actually really satisfying to do.",
 				"image":"speleothems.jpg",
+				"introduced":12
+			},
+			{
+				"name": "Cave Roots",
+				"classname":"CaveRoots",
+				"description":"Cave Roots will now spawn on the walls of caves. These blocks look like dried vines, but you can't climb them.<br><br>Breaking the roots has a chance to drop a Cave Root item, which you can eat, but takes longer to. There's also roots with flowers on them, which will drop Sprout items, that can be turned into Dyes. You can harvest the root blocks with Shears.<br><br>Roots will grow downwards, and potentially create more Sprouts, if left in an area with light level dark enough to spawn mobs.",
+				"image":"cave-roots.jpg",
+				"introduced":12
+			},
+			{
+				"name": "Archaeologist",
+				"classname":"Archaeologist",
+				"description":"Archaeologist Villagers will rarely install themselves in the walls of caves. You'll know you're close to one when you start hearing the classic \"Hmmmm\" sound effect.<br><br>These villagers trade in bones and other items they use in their expeditions. Additionally, you can buy their hat!<br><br>Wearing an Archaeologist Hat has a chance for any ores you mine that can be affected by fortune to drop one additional item, so put the hat on before mining those diamonds!",
+				"image":"archaeologist.jpg",
+				"introduced":12
+			},
+			{
+				"name": "Stonelings",
+				"classname":"Stonelings",
+				"description":"Stonelings are new passive mobs that spawn in the deep underground. These little guys will spawn in carrying an item, and will get startled if you get too close to them without sneaking. Once startled, they'll run away from you and eventually poof out of existance. If you manage to kill one, you'll get the item its carrying.<br><br>Additionally, Stonelings may drop a Heart of Diamond, a new item which you can use on any stone block to create your own tamed Stoneling! Tamed Stonelings can hold items you give them, eat Stone (they love it!), and follow you if you hold a Diamond.",
+				"image":"stonelings.jpg",
+				"introduced":12
+			},
+			{
+				"name": "Monster Boxes",
+				"classname":"MonsterBoxes",
+				"description":"When spelunking around caves, you may find Spawner-like Monster Boxes in your way. This block will \"ignite\" when you get close to it, and will quickly spout out a small batch of monsters before destroying itself. This adds a small and momentary challenge to break up the pace of caving.",
+				"image":"monster-box.jpg",
 				"introduced":12
 			}
 		]
@@ -1141,6 +1223,28 @@
 				"description":"10 seconds before an item would despawn, it starts flashing in and out.<br><br><i>I can't really show this in a static image so just take my word for it.</i>",
 				"image":"items-flashing.jpg",
 				"introduced":12
+			},
+			{
+				"name":"Items In Chat",
+				"classname":"RenderItemsInChat",
+				"description":"Whenever an item shows up in chat, you can see a little preview of it!",
+				"image":"items-in-chat.jpg",
+				"introduced":12,
+				"contributor": "WireSegal"
+			},
+			{
+				"name":"Enchanted Book Icons",
+				"classname":"EnchantedBooksShowItems",
+				"description":"Enchanted Books will now show in their tooltip small versions of the items that can be enchanted with the enchantments they contain.",
+				"image":"enchanted-book-icons.jpg",
+				"introduced":12
+			},
+			{
+				"name":"Slot Transfer Highlight",
+				"classname":"ShowInvalidSlots",
+				"description":"When looking at an item in your inventory, or holding the item in your cursor, inventory slots in which the item can not go into will be highlighted red.",
+				"image":"highlight-inventory-slots.jpg",
+				"introduced":12
 			}
 		]
 	},
@@ -1263,6 +1367,14 @@
 				"introduced":12
 			},
 			{
+				"name":"Horse Whistles",
+				"classname":"HorseWhistle",
+				"description":"A silent whistle which horses can hear. They'll come right to you if you blow it! This only works on horses you personally have tamed, and only if they aren't being ridden and aren't leashed.",
+				"image":"horse-whistles.jpg",
+                "contributor": "WireSegal",
+				"introduced":12
+			},
+			{
 				"name":"Map Markers",
 				"classname":"MapMarkers",
 				"description":"Combine an Ink Sac with a Map to add a marker to where you're currently standing.<br><br>Note: At the moment, markers can't be removed, so plan wisely.",
@@ -1281,6 +1393,13 @@
 				"classname":"ParrotEggs",
 				"description":"Feeding a parrot Beetroot Seeds has a chance to make the parrot start making an egg. After a few minutes, the parrot will pop out a Parrot Egg, which you throw like a normal egg to get a guaranteed parrot of the egg's color.<br><br>The color of the egg that is produced deepnds on the color of the parrot laying it. Every parrot can lay every color, but it's much more likely you'll get an egg of the same color.<br><br>There's also a secret parrot added...",
 				"image":"parrot-eggs.jpg",
+				"introduced":12
+			},
+			{
+				"name":"Pickarang",
+				"classname":"Pickarang",
+				"description":"A new tool for mining! The pickarang is a boomerang pickaxe - throw it, it breaks whatever it hits, and comes back to you with the drops.<br><br>The Pickarang is crafted witn a Heart of Diamond (from Stonelings, in the World module, or just diamonds if it's disabled), and can be enchanted with Unbreaking, Fortune, and Silk Touch.<br><br>Check it out in action <a href='https://twitter.com/VazkiiMods/status/1132097540902535168'>here</a>.",
+				"image":"pickarang.jpg",
 				"introduced":12
 			}
 		]

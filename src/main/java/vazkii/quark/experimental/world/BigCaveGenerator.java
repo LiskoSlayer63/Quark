@@ -10,20 +10,21 @@
  */
 package vazkii.quark.experimental.world;
 
-import java.util.Random;
-
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkPrimer;
 import net.minecraft.world.gen.MapGenCaves;
 import vazkii.quark.experimental.features.BiggerCaves;
 
+import javax.annotation.Nonnull;
+import java.util.Random;
+
 public class BigCaveGenerator extends MapGenCaves {
 
 	// We need to use a second RNG since changing the amount of calls in the built-in one will change the way the caves generate
-	Random rand2 = new Random();
+	private final Random rand2 = new Random();
 
 	@Override
-	protected void recursiveGenerate(World worldIn, int chunkX, int chunkZ, int p_180701_4_, int p_180701_5_, ChunkPrimer chunkPrimerIn) {
+	protected void recursiveGenerate(World worldIn, int chunkX, int chunkZ, int originalX, int originalZ, @Nonnull ChunkPrimer chunkPrimerIn) {
 		int i = rand.nextInt(rand.nextInt(rand.nextInt(15) + 1) + 1);
 		rand2.setSeed(worldIn.getSeed()); // new
 
@@ -37,7 +38,7 @@ public class BigCaveGenerator extends MapGenCaves {
 			int k = 1;
 
 			if(rand.nextInt(4) == 0) {
-				addRoom(rand.nextLong(), p_180701_4_, p_180701_5_, chunkPrimerIn, d0, d1, d2);
+				addRoom(rand.nextLong(), originalX, originalZ, chunkPrimerIn, d0, d1, d2);
 				k += rand.nextInt(4);
 			}
 
@@ -52,7 +53,7 @@ public class BigCaveGenerator extends MapGenCaves {
 				if(BiggerCaves.generateHugeCaves && rand2.nextInt(BiggerCaves.hugeCaveChance) == 0 && d1 < BiggerCaves.hugeCaveMaxY)
 					f2 = BiggerCaves.hugeCaveSizeBase + rand2.nextFloat() * BiggerCaves.hugeCaveSizeVariance;
 
-				addTunnel(rand.nextLong(), p_180701_4_, p_180701_5_, chunkPrimerIn, d0, d1, d2, f2, f, f1, 0, 0, 1.0D);
+				addTunnel(rand.nextLong(), originalX, originalZ, chunkPrimerIn, d0, d1, d2, f2, f, f1, 0, 0, 1.0D);
 			}
 		}
 	}

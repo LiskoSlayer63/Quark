@@ -1,13 +1,5 @@
 package vazkii.quark.misc.client.gui;
 
-import java.awt.Color;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import org.lwjgl.input.Keyboard;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -18,26 +10,25 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
-import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntityNote;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import org.lwjgl.input.Keyboard;
 import vazkii.arl.network.NetworkHandler;
 import vazkii.quark.base.module.ModuleLoader;
 import vazkii.quark.base.network.message.MessageTuneNoteBlock;
 import vazkii.quark.misc.feature.NoteBlockInterface;
 import vazkii.quark.misc.feature.NoteBlocksMobSounds;
 
+import java.awt.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class GuiNoteBlock extends GuiScreen {
 
-	private static final SoundEvent[] INSTRUMENTS = new SoundEvent[] {
-			SoundEvents.BLOCK_NOTE_HARP, SoundEvents.BLOCK_NOTE_BASEDRUM, SoundEvents.BLOCK_NOTE_SNARE, SoundEvents.BLOCK_NOTE_HAT, SoundEvents.BLOCK_NOTE_BASS
-	};
-
-	private static ResourceLocation noteblockResource = new ResourceLocation("quark", "textures/misc/noteblock.png");
+	private static final ResourceLocation noteblockResource = new ResourceLocation("quark", "textures/misc/noteblock.png");
 	private static final int TEXTURE_WIDTH = 512;
 	private static final int TEXTURE_HEIGHT = 256;
 
@@ -67,14 +58,14 @@ public class GuiNoteBlock extends GuiScreen {
 		Keyboard.KEY_Q, Keyboard.KEY_J, Keyboard.KEY_K, Keyboard.KEY_X, Keyboard.KEY_B, Keyboard.KEY_M, Keyboard.KEY_W, Keyboard.KEY_V, Keyboard.KEY_Z
 	};
 	
-	private List<Key> whiteKeys = new ArrayList();
-	private List<Key> blackKeys = new ArrayList();
+	private final List<Key> whiteKeys = new ArrayList<>();
+	private final List<Key> blackKeys = new ArrayList<>();
 
-	Key hoveredKey = null;
-	boolean hoversNoteBlock = false;
+	protected Key hoveredKey = null;
+	protected boolean hoversNoteBlock = false;
 
-	TileEntityNote noteBlock;
-	CoordinateHolder coords = new CoordinateHolder();
+	protected final TileEntityNote noteBlock;
+	protected final CoordinateHolder coords = new CoordinateHolder();
 
 	public GuiNoteBlock(TileEntityNote noteBlock) {
 		this.noteBlock = noteBlock;
@@ -173,7 +164,7 @@ public class GuiNoteBlock extends GuiScreen {
 		GlStateManager.popMatrix();
 
 		if(hoversNoteBlock)
-			vazkii.arl.util.RenderHelper.renderTooltip(mouseX, mouseY, Arrays.asList(new String[] { I18n.format("quarkmisc.incrementNote") }));
+			vazkii.arl.util.RenderHelper.renderTooltip(mouseX, mouseY, Collections.singletonList(I18n.format("quarkmisc.incrementNote")));
 	}
 
 	@Override
@@ -218,16 +209,16 @@ public class GuiNoteBlock extends GuiScreen {
 		else if(material == Material.WOOD)
 			note = 4;
 
-        if(block == Blocks.CLAY)
-            note = 5;
-        else if(block == Blocks.GOLD_BLOCK)
-            note = 6;
-        else if(block == Blocks.WOOL)
-            note = 7;
-        else if(block == Blocks.PACKED_ICE)
-            note = 8;
-        else if(block == Blocks.BONE_BLOCK)
-            note = 9;
+		if(block == Blocks.CLAY)
+			note = 5;
+		else if(block == Blocks.GOLD_BLOCK)
+			note = 6;
+		else if(block == Blocks.WOOL)
+			note = 7;
+		else if(block == Blocks.PACKED_ICE)
+			note = 8;
+		else if(block == Blocks.BONE_BLOCK)
+			note = 9;
 		
 		return note;
 	}
@@ -284,7 +275,7 @@ public class GuiNoteBlock extends GuiScreen {
 			int y = c.baseY + this.y;
 			int sw = mc.fontRenderer.getStringWidth(desc);
 
-			int color = Color.HSBtoRGB((float) (24 - clicks) / 24F - 0.6F, 1F, 1F);
+			int color = Color.HSBtoRGB((24 - clicks) / 24F - 0.6F, 1F, 1F);
 			mc.fontRenderer.drawString(desc, x + w / 2 - sw / 2, y + h - 24, color);
 
 			String s = Integer.toString(clicks);
@@ -343,7 +334,7 @@ public class GuiNoteBlock extends GuiScreen {
 	}
 
 	private static class CoordinateHolder {
-		int baseX, baseY, mouseX, mouseY;
+		public int baseX, baseY, mouseX, mouseY;
 	}
 
 

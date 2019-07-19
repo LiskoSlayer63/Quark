@@ -10,16 +10,9 @@
  */
 package vazkii.quark.misc.feature;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Iterator;
-
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
-
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentData;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -28,6 +21,7 @@ import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemEnchantedBook;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.storage.loot.LootContext;
 import net.minecraft.world.storage.loot.LootEntryItem;
@@ -37,7 +31,6 @@ import net.minecraft.world.storage.loot.functions.LootFunction;
 import net.minecraft.world.storage.loot.functions.LootFunctionManager;
 import net.minecraftforge.event.AnvilUpdateEvent;
 import net.minecraftforge.event.LootTableLoadEvent;
-import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import vazkii.arl.util.ProxyRegistry;
@@ -45,13 +38,22 @@ import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.misc.item.ItemAncientTome;
 
+import javax.annotation.Nonnull;
+import java.util.*;
+
 public class AncientTomes extends Feature {
 
 	public static Item ancient_tome;
-	public static List<Enchantment> validEnchants = new ArrayList();
+	public static final List<Enchantment> validEnchants = new ArrayList<>();
 	private String[] enchantNames;
 
-	int dungeonWeight, libraryWeight, itemQuality, mergeTomeCost, applyTomeCost;
+	public static int dungeonWeight, libraryWeight, itemQuality, mergeTomeCost, applyTomeCost;
+
+	public static NBTTagList getEnchantmentsForStack(NBTTagList previous, ItemStack stack) {
+		if (!stack.isEmpty() && stack.getItem() == ancient_tome)
+			return ItemEnchantedBook.getEnchantments(stack);
+		return previous;
+	}
 
 	@Override
 	public void setupConfig() {
@@ -71,14 +73,8 @@ public class AncientTomes extends Feature {
 	}
 
 	@Override
-	public void postInit(FMLPostInitializationEvent event) {
-		validEnchants.clear();
-		for(String s : enchantNames) {
-			ResourceLocation r = new ResourceLocation(s);
-			Enchantment e = Enchantment.REGISTRY.getObject(r);
-			if(e != null)
-				validEnchants.add(e);
-		}
+	public void postInit() {
+		initializeEnchantmentList(enchantNames, validEnchants);
 	}
 
 	@Override
@@ -111,41 +107,41 @@ public class AncientTomes extends Feature {
 				boolean hasOverLevel = false;
 				boolean hasMatching = false;
 				for (Map.Entry<Enchantment, Integer> entry : enchants.entrySet()) {
-					Enchantment ench = entry.getKey();
-					if(ench == null)
+					Enchantment enchantment = entry.getKey();
+					if(enchantment == null)
 						continue;
 					
 					int level = entry.getValue();
-					if (level > ench.getMaxLevel()) {
+					if (level > enchantment.getMaxLevel()) {
 						hasOverLevel = true;
-						if (ench.canApply(left)) {
+						if (enchantment.canApply(left)) {
 							hasMatching = true;
 							//remove incompatible enchantments
 							for (Iterator<Enchantment> iterator = currentEnchants.keySet().iterator(); iterator.hasNext(); ) {
-								Enchantment enchCompare = iterator.next();
-								if (enchCompare == ench)
+								Enchantment comparingEnchantment = iterator.next();
+								if (comparingEnchantment == enchantment)
 									continue;
 
-								if (!enchCompare.isCompatibleWith(ench)) {
+								if (!comparingEnchantment.isCompatibleWith(enchantment)) {
 									iterator.remove();
 								}
 							}
-							currentEnchants.put(ench, level);
+							currentEnchants.put(enchantment, level);
 						}
-					} else if (ench.canApply(left)) {
+					} else if (enchantment.canApply(left)) {
 						boolean compatible = true;
 						//don't apply incompatible enchantments
-						for (Enchantment enchCompare : currentEnchants.keySet()) {
-							if (enchCompare == ench)
+						for (Enchantment comparingEnchantment : currentEnchants.keySet()) {
+							if (comparingEnchantment == enchantment)
 								continue;
 
-							if (enchCompare != null && !enchCompare.isCompatibleWith(ench)) {
+							if (comparingEnchantment != null && !comparingEnchantment.isCompatibleWith(enchantment)) {
 								compatible = false;
 								break;
 							}
 						}
 						if (compatible) {
-							currentEnchants.put(ench, level);
+							currentEnchants.put(enchantment, level);
 						}
 					}
 				}
@@ -174,7 +170,7 @@ public class AncientTomes extends Feature {
 		Map<Enchantment, Integer> enchantsTome = EnchantmentHelper.getEnchantments(tome);
 		for (Map.Entry<Enchantment, Integer> entry : enchantsTome.entrySet()) {
 			if(enchantsBook.getOrDefault(entry.getKey(), 0).equals(entry.getValue())){
-				enchantsBook.put(entry.getKey(), entry.getValue() + 1);
+				enchantsBook.put(entry.getKey(), Math.min(entry.getValue(), entry.getKey().getMaxLevel()) + 1);
 			} else {
 				return;
 			}
@@ -207,12 +203,12 @@ public class AncientTomes extends Feature {
 				Enchantments.LURE
 		};
 
-		List<String> strings = new ArrayList();
+		List<String> strings = new ArrayList<>();
 		for(Enchantment e : enchants)
 			if(e != null && e.getRegistryName() != null)
 				strings.add(e.getRegistryName().toString());
 
-		return strings.toArray(new String[strings.size()]);
+		return strings.toArray(new String[0]);
 	}
 
 	@Override
@@ -226,10 +222,11 @@ public class AncientTomes extends Feature {
 			super(new LootCondition[0]);
 		}
 
+		@Nonnull
 		@Override
-		public ItemStack apply(ItemStack stack, Random rand, LootContext context) {
+		public ItemStack apply(@Nonnull ItemStack stack, @Nonnull Random rand, @Nonnull LootContext context) {
 			Enchantment enchantment = validEnchants.get(rand.nextInt(validEnchants.size()));
-			stack.addEnchantment(enchantment, enchantment.getMaxLevel());
+			ItemEnchantedBook.addEnchantment(stack, new EnchantmentData(enchantment, enchantment.getMaxLevel()));
 			return stack;
 		}
 		
@@ -240,12 +237,13 @@ public class AncientTomes extends Feature {
 			}
 
 			@Override
-			public void serialize(JsonObject object, EnchantTomeFunction functionClazz,
-					JsonSerializationContext serializationContext) {}
+			public void serialize(@Nonnull JsonObject object, @Nonnull EnchantTomeFunction functionClazz,
+								  @Nonnull JsonSerializationContext serializationContext) {}
 
+			@Nonnull
 			@Override
-			public EnchantTomeFunction deserialize(JsonObject object, JsonDeserializationContext deserializationContext,
-					LootCondition[] conditionsIn) {
+			public EnchantTomeFunction deserialize(@Nonnull JsonObject object, @Nonnull JsonDeserializationContext deserializationContext,
+												   @Nonnull LootCondition[] conditionsIn) {
 				return new EnchantTomeFunction();
 			}	
 		}

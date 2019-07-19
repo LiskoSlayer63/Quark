@@ -1,12 +1,5 @@
 package vazkii.quark.world.world;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
@@ -16,11 +9,13 @@ import net.minecraft.world.biome.Biome;
 import vazkii.quark.base.handler.BiomeTypeConfigHandler;
 import vazkii.quark.world.feature.UndergroundBiomes.UndergroundBiomeInfo;
 
+import java.util.*;
+
 public class UndergroundBiomeGenerator extends MultiChunkFeatureGenerator {
 
 	public final UndergroundBiomeInfo info;
 	
-	long seedXor;
+	private final long seedXor;
 	
 	public UndergroundBiomeGenerator(UndergroundBiomeInfo info) {
 		this.info = info;
@@ -29,7 +24,7 @@ public class UndergroundBiomeGenerator extends MultiChunkFeatureGenerator {
 	}
 	
 	@Override
-	public boolean canGenerate(World world, int chunkX, int chunkZ) {
+	public boolean canGenerate(World world) {
 		return info.enabled && info.dims.canSpawnHere(world);
 	}
 	
@@ -47,8 +42,8 @@ public class UndergroundBiomeGenerator extends MultiChunkFeatureGenerator {
 	}
 
 	@Override
-	public BlockPos[] getSourcesInChunk(Random random, int chunkX, int chunkZ, World world) {
-		if(random.nextInt(info.rarity) == 0) {
+	public BlockPos[] getSourcesInChunk(Random random, int chunkX, int chunkZ) {
+		if(info.rarity > 0 && random.nextInt(info.rarity) == 0) {
 			return new BlockPos[] {
 				new BlockPos(chunkX * 16 + random.nextInt(16), info.minY + random.nextInt(info.maxY - info.minY), chunkZ * 16 + random.nextInt(16))
 			};
@@ -98,8 +93,8 @@ public class UndergroundBiomeGenerator extends MultiChunkFeatureGenerator {
 		context.wallMap.keySet().forEach(pos -> info.biome.finalWallPass(world, pos));
 		context.insideList.forEach(pos -> info.biome.finalInsidePass(world, pos));
 		
-		if(info.biome.hasDungeon() && world instanceof WorldServer && random.nextFloat() < info.biome.dungeonChance) {
-			List<BlockPos> candidates = new ArrayList(context.wallMap.keySet());
+		if(info.biome.hasDungeon() && world instanceof WorldServer && random.nextDouble() < info.biome.dungeonChance) {
+			List<BlockPos> candidates = new ArrayList<>(context.wallMap.keySet());
 			candidates.removeIf(pos -> {
 				BlockPos down = pos.down();
 				IBlockState state = world.getBlockState(down);
@@ -118,11 +113,11 @@ public class UndergroundBiomeGenerator extends MultiChunkFeatureGenerator {
 	
 	public static class UndergroundBiomeGenerationContext {
 		
-		public List<BlockPos> floorList = new LinkedList();
-		public List<BlockPos> ceilingList = new LinkedList();
-		public List<BlockPos> insideList = new LinkedList();
+		public final List<BlockPos> floorList = new LinkedList<>();
+		public final List<BlockPos> ceilingList = new LinkedList<>();
+		public final List<BlockPos> insideList = new LinkedList<>();
 		
-		public Map<BlockPos, EnumFacing> wallMap = new HashMap();
+		public final Map<BlockPos, EnumFacing> wallMap = new HashMap<>();
 		
 	}
 }

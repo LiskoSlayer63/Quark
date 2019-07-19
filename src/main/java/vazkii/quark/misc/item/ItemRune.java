@@ -79,13 +79,7 @@ public class ItemRune extends ItemMod implements IItemColorProvider, ICustomEnch
 	@Override
 	@SideOnly(Side.CLIENT)
 	public IItemColor getItemColor() {
-		return new IItemColor() {
-
-			@Override
-			public int colorMultiplier(ItemStack stack, int tintIndex) {
-				return tintIndex == 1 ? ColorRunes.getColorFromStack(stack) : 0xFFFFFF;
-			}
-		};
+		return (stack, tintIndex) -> tintIndex == 1 ? ColorRunes.getColorFromStack(stack) : 0xFFFFFF;
 	}
 
 }

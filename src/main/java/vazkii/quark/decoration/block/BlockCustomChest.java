@@ -10,18 +10,11 @@
  */
 package vazkii.quark.decoration.block;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import javax.annotation.Nullable;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockChest;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.properties.IProperty;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.client.renderer.ItemMeshDefinition;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
@@ -32,6 +25,7 @@ import net.minecraft.item.EnumRarity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -40,14 +34,15 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.ILockableContainer;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.block.IQuarkBlock;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.decoration.feature.VariedChests;
 import vazkii.quark.decoration.item.ItemChestBlock;
 import vazkii.quark.decoration.tile.TileCustomChest;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 
@@ -59,18 +54,20 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 
 		variants = new String[] { name };
 		bareName = name;
-		setUnlocalizedName(name);
+		setTranslationKey(name);
 		setHardness(2.5F);
 		setSoundType(SoundType.WOOD);
 		setCreativeTab(type == VariedChests.CUSTOM_TYPE_QUARK_TRAP ? CreativeTabs.REDSTONE : CreativeTabs.DECORATIONS);
 	}
 
+	@Nonnull
 	@Override
-	public Block setUnlocalizedName(String name) {
-		super.setUnlocalizedName(name);
-		setRegistryName(LibMisc.PREFIX_MOD + name);
+	public Block setTranslationKey(@Nonnull String name) {
+		super.setTranslationKey(name);
+		String key = LibMisc.PREFIX_MOD + name;
+		setRegistryName(key);
 		ProxyRegistry.register(this);
-		ProxyRegistry.register(new ItemChestBlock(this, new ResourceLocation(LibMisc.PREFIX_MOD + name)));
+		ProxyRegistry.register(new ItemChestBlock(this, new ResourceLocation(key)));
 
 		return this;
 	}
@@ -83,12 +80,6 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 	@Override
 	public String[] getVariants() {
 		return variants;
-	}
-
-	@Override
-	@SideOnly(Side.CLIENT)
-	public ItemMeshDefinition getCustomMeshDefinition() {
-		return null;
 	}
 
 	@Override
@@ -111,17 +102,20 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 		return null;
 	}
 
+	@Nonnull
 	@Override
+	@SuppressWarnings("deprecation")
 	public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
 		VariedChests.ChestType myType = getCustomType(source, pos);
 		return getCustomType(source, pos.north()) == myType ? NORTH_CHEST_AABB : getCustomType(source, pos.south()) == myType ? SOUTH_CHEST_AABB : getCustomType(source, pos.west()) == myType ? WEST_CHEST_AABB : getCustomType(source, pos.east()) == myType ? EAST_CHEST_AABB : NOT_CONNECTED_AABB;
 	}
 
 	@Override
-	public void onBlockAdded(World worldIn, BlockPos pos, IBlockState state) {
+	public void onBlockAdded(@Nonnull World worldIn, @Nonnull BlockPos pos, @Nonnull IBlockState state) {
 		// NO-OP
 	}
 
+	@Nonnull
 	@Override
 	public IBlockState getStateForPlacement(World worldIn, BlockPos pos, EnumFacing facing, float hitX, float hitY, float hitZ, int meta, EntityLivingBase placer) {
 		return getDefaultState().withProperty(FACING, placer.getHorizontalFacing());
@@ -129,7 +123,7 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 
 	@Override
 	public void onBlockPlacedBy(World worldIn, BlockPos pos, IBlockState state, EntityLivingBase placer, ItemStack stack) {
-		EnumFacing facing = EnumFacing.getHorizontal(MathHelper.floor(placer.rotationYaw * 4.0F / 360.0F + 0.5D) & 3).getOpposite();
+		EnumFacing facing = EnumFacing.byHorizontalIndex(MathHelper.floor(placer.rotationYaw * 4.0F / 360.0F + 0.5D) & 3).getOpposite();
 		state = state.withProperty(FACING, facing);
 		BlockPos northPos = pos.north();
 		BlockPos southPos = pos.south();
@@ -162,7 +156,7 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 					setState(worldIn, southPos, state.withProperty(FACING, corrected), 3);
 				else if(westChest)
 					setState(worldIn, westPos, state.withProperty(FACING, corrected), 3);
-				else if(eastChest)
+				else
 					setState(worldIn, eastPos, state.withProperty(FACING, corrected), 3);
 			}
 		} else {
@@ -199,54 +193,57 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public boolean canProvidePower(IBlockState state) {
 		return chestType == VariedChests.CUSTOM_TYPE_QUARK_TRAP;
 	}
 
+	@Nonnull
 	@Override
 	@Deprecated
-	public IBlockState checkForSurroundingChests(World worldIn, BlockPos pos, IBlockState state) {
+	public IBlockState checkForSurroundingChests(World worldIn, @Nonnull BlockPos pos, @Nonnull IBlockState state) {
 		return state;
 	}
 
+	@Nonnull
 	@Override
 	@Deprecated
-	public IBlockState correctFacing(World worldIn, BlockPos pos, IBlockState state) {
+	public IBlockState correctFacing(@Nonnull World worldIn, @Nonnull BlockPos pos, @Nonnull IBlockState state) {
 		return correctFacing(worldIn, pos, state, VariedChests.ChestType.NONE);
 	}
 
 	public IBlockState correctFacing(World worldIn, BlockPos pos, IBlockState state, VariedChests.ChestType myType) {
 		EnumFacing facing = null;
 
-		for(EnumFacing horizFace : EnumFacing.Plane.HORIZONTAL) {
-			if(getCustomType(worldIn, pos.offset(horizFace)) == myType)
+		for(EnumFacing horizontal : EnumFacing.Plane.HORIZONTAL) {
+			if(getCustomType(worldIn, pos.offset(horizontal)) == myType)
 				return state;
 
-			if(worldIn.getBlockState(pos.offset(horizFace)).isFullBlock()) {
+			if(worldIn.getBlockState(pos.offset(horizontal)).isFullBlock()) {
 				if(facing != null) {
 					facing = null;
 					break;
 				}
 
-				facing = horizFace;
+				facing = horizontal;
 			}
 		}
 
 		if(facing != null) {
 			return state.withProperty(FACING, facing.getOpposite());
 		} else {
-			EnumFacing enumfacing2 = state.getValue(FACING);
+			EnumFacing stateFacing = state.getValue(FACING);
 
-			if(worldIn.getBlockState(pos.offset(enumfacing2)).isFullBlock())
-				enumfacing2 = enumfacing2.getOpposite();
+			if(worldIn.getBlockState(pos.offset(stateFacing)).isFullBlock())
+				stateFacing = stateFacing.getOpposite();
 
-			if(worldIn.getBlockState(pos.offset(enumfacing2)).isFullBlock())
-				enumfacing2 = enumfacing2.rotateY();
+			if(worldIn.getBlockState(pos.offset(stateFacing)).isFullBlock())
+				stateFacing = stateFacing.rotateY();
 
-			if(worldIn.getBlockState(pos.offset(enumfacing2)).isFullBlock())
-				enumfacing2 = enumfacing2.getOpposite();
+			if(worldIn.getBlockState(pos.offset(stateFacing)).isFullBlock())
+				stateFacing = stateFacing.getOpposite();
 
-			return state.withProperty(FACING, enumfacing2);
+			return state.withProperty(FACING, stateFacing);
 		}
 	}
 
@@ -269,12 +266,12 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 	}
 
 	@Override
-	public boolean removedByPlayer(IBlockState state, World world, BlockPos pos, EntityPlayer player, boolean willHarvest) {
+	public boolean removedByPlayer(@Nonnull IBlockState state, World world, @Nonnull BlockPos pos, @Nonnull EntityPlayer player, boolean willHarvest) {
 		return willHarvest || super.removedByPlayer(state, world, pos, player, false);
 	}
 
 	@Override
-	public void harvestBlock(World worldIn, EntityPlayer player, BlockPos pos, IBlockState state, @Nullable TileEntity te, @Nullable ItemStack stack) {
+	public void harvestBlock(@Nonnull World worldIn, EntityPlayer player, @Nonnull BlockPos pos, @Nonnull IBlockState state, @Nullable TileEntity te, @Nullable ItemStack stack) {
 		super.harvestBlock(worldIn, player, pos, state, te, stack);
 
 		worldIn.setBlockToAir(pos);
@@ -299,7 +296,7 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 	}
 
 	public VariedChests.ChestType getCustomType(ItemStack stack) {
-		return VariedChests.ChestType.class.getEnumConstants()[Math.min(5, stack.getItemDamage() + 1)];
+		return VariedChests.ChestType.values()[Math.min(5, stack.getItemDamage() + 1)];
 	}
 
 	public ItemStack setCustomType(ItemStack stack, VariedChests.ChestType type) {
@@ -309,7 +306,7 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 	}
 
 	@Override
-	public ILockableContainer getContainer(World world, BlockPos pos, boolean locked) {
+	public ILockableContainer getContainer(World world, @Nonnull BlockPos pos, boolean locked) {
 		TileEntity tile = world.getTileEntity(pos);
 
 		if(!(tile instanceof TileCustomChest)) {
@@ -347,7 +344,7 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 	}
 
 	private boolean isBelowSolidBlock(World worldIn, BlockPos pos) {
-		return worldIn.getBlockState(pos.up()).isSideSolid(worldIn, pos.up(), EnumFacing.DOWN);
+		return worldIn.getBlockState(pos.up()).doesSideBlockChestOpening(worldIn, pos.up(), EnumFacing.DOWN);
 	}
 
 	private boolean isOcelotSittingOnChest(World worldIn, BlockPos pos) {
@@ -362,12 +359,13 @@ public class BlockCustomChest extends BlockChest implements IQuarkBlock {
 	}
 
 	@Override
-	public List<ItemStack> getDrops(IBlockAccess world, BlockPos pos, IBlockState state, int fortune) {
-		return new ArrayList<>(Collections.singletonList(setCustomType(new ItemStack(this, 1), getCustomType(world, pos))));
+	public void getDrops(@Nonnull NonNullList<ItemStack> drops, IBlockAccess world, BlockPos pos, @Nonnull IBlockState state, int fortune) {
+		drops.add(setCustomType(new ItemStack(this, 1), getCustomType(world, pos)));
 	}
 
+	@Nonnull
 	@Override
-	public ItemStack getPickBlock(IBlockState state, RayTraceResult target, World world, BlockPos pos, EntityPlayer player) {
+	public ItemStack getPickBlock(@Nonnull IBlockState state, RayTraceResult target, @Nonnull World world, @Nonnull BlockPos pos, EntityPlayer player) {
 		return setCustomType(new ItemStack(this, 1), getCustomType(world, pos));
 	}
 

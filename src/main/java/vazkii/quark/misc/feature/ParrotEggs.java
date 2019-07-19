@@ -1,14 +1,14 @@
 package vazkii.quark.misc.feature;
 
-import java.util.Random;
-
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
 import net.minecraft.entity.passive.EntityParrot;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.ResourceLocation;
@@ -25,30 +25,56 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.quark.base.Quark;
 import vazkii.quark.base.lib.LibEntityIDs;
 import vazkii.quark.base.module.Feature;
+import vazkii.quark.base.module.ModuleLoader;
 import vazkii.quark.misc.client.render.RenderParrotEgg;
 import vazkii.quark.misc.client.render.RenderParrotKoto;
 import vazkii.quark.misc.entity.EntityParrotEgg;
 import vazkii.quark.misc.item.ItemParrotEgg;
 
+import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
+
 public class ParrotEggs extends Feature {
+
+	private static final ResourceLocation KOTO = new ResourceLocation("quark", "textures/entity/kotobirb.png");
 
 	private static final String TAG_EGG_TIMER = "quark:parrot_egg_timer";
 
 	public static Item parrot_egg;
 
-	Item item;
-	int chance, eggTime;
-	boolean enableKotobirb;
+	public static Item item;
+	public static double chance;
+	public static int eggTime;
+	public static boolean enableKotobirb;
+
+	@SideOnly(Side.CLIENT)
+	public static ResourceLocation getTextureForParrot(ResourceLocation previous, NBTTagCompound parrot) {
+		if (!ModuleLoader.isFeatureEnabled(ParrotEggs.class) || !enableKotobirb)
+			return previous;
+
+
+		UUID uuid = parrot.getUniqueId("UUID");
+		Class<?> entityClass = EntityList.getClassFromName(parrot.getString("id"));
+
+		if (entityClass == EntityParrot.class &&
+				parrot.getInteger("Variant") == 4 &&
+				(uuid == null || uuid.getLeastSignificantBits() % 20 == 0))
+				return KOTO;
+
+		return previous;
+	}
 
 	@Override
 	public void setupConfig() {
 		item = Items.BEETROOT_SEEDS;
-		String itemName = loadPropString("Feed Item", "", item.getRegistryName().toString());
+		String itemName = loadPropString("Feed Item", "", Objects.toString(item.getRegistryName()));
 		Item targetItem = Item.REGISTRY.getObject(new ResourceLocation(itemName));
 		if(targetItem != null)
 			item = targetItem;
 
-		chance = loadPropInt("Success Chance", "If this is X, the parrot will, on average, start making an egg in every X seeds fed", 20);
+		chance = loadLegacyPropChance("Success Percentage Chance", "Success Chance",
+				"If this is X, the parrot will, on average, start making an egg in every 1/X seeds fed", 0.05);
 		eggTime = loadPropInt("Egg Creation Time", "", 12000);
 		enableKotobirb = loadPropBool("Enable Special Awesome Parrot", "", true);
 	}
@@ -63,7 +89,7 @@ public class ParrotEggs extends Feature {
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		RenderingRegistry.registerEntityRenderingHandler(EntityParrotEgg.class, RenderParrotEgg.factory());
 		
 		if(enableKotobirb)
@@ -80,11 +106,9 @@ public class ParrotEggs extends Feature {
 					return;
 				
 				EntityPlayer player = event.getEntityPlayer();
-				EnumHand hand = EnumHand.MAIN_HAND;
 				ItemStack stack = player.getHeldItemMainhand();
 				if(stack.isEmpty() || stack.getItem() != item) {
 					stack = player.getHeldItemOffhand();
-					hand = EnumHand.OFF_HAND;
 				}
 
 				if(!stack.isEmpty() && stack.getItem() == item) {
@@ -96,9 +120,9 @@ public class ParrotEggs extends Feature {
 						stack.shrink(1);
 					
 					WorldServer ws = (WorldServer) e.world;
-	                ws.playSound(null, e.posX, e.posY, e.posZ, SoundEvents.ENTITY_PARROT_EAT, SoundCategory.NEUTRAL, 1.0F, 1.0F + (ws.rand.nextFloat() - ws.rand.nextFloat()) * 0.2F);
+					ws.playSound(null, e.posX, e.posY, e.posZ, SoundEvents.ENTITY_PARROT_EAT, SoundCategory.NEUTRAL, 1.0F, 1.0F + (ws.rand.nextFloat() - ws.rand.nextFloat()) * 0.2F);
 
-					if(e.world.rand.nextInt(chance) == 0) {
+					if(e.world.rand.nextDouble() < chance) {
 						e.getEntityData().setInteger(TAG_EGG_TIMER, eggTime);
 						ws.spawnParticle(EnumParticleTypes.VILLAGER_HAPPY, e.posX, e.posY, e.posZ, 10, e.width, e.height, e.width, 0);
 					} else ws.spawnParticle(EnumParticleTypes.SMOKE_NORMAL, e.posX, e.posY, e.posZ, 10, e.width, e.height, e.width, 0);

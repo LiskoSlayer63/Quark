@@ -10,10 +10,7 @@
  */
 package vazkii.quark.management.feature;
 
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.google.common.collect.Lists;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiContainer;
@@ -38,17 +35,20 @@ import vazkii.quark.management.client.gui.GuiButtonChest;
 import vazkii.quark.management.client.gui.GuiButtonChest.Action;
 import vazkii.quark.management.gamerule.DropoffGamerule;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class StoreToChests extends Feature {
 
 	public static final String GAME_RULE = "quark_allowDropoff";
 
 	public static boolean clientDisabled;
 	public static boolean invert;
-	
-	int xPos, yPos;
-	int xPosC, yPosC;
 
-    List<String> classnames;
+	public static int xPos, yPos;
+	public static int xPosC, yPosC;
+
+	public static List<String> classnames;
 
 	@Override
 	public void setupConfig() {
@@ -59,7 +59,7 @@ public class StoreToChests extends Feature {
 		yPosC = loadPropInt("Position Y (Creative)", "", -20);
 
 		String[] classnamesArr = loadPropStringList("Forced GUIs", "GUIs in which the drop off button should be forced to show up. Use the \"Debug Classnames\" option in chest buttons to find the names.", new String[0]);
-		classnames = new ArrayList(Arrays.asList(classnamesArr));
+		classnames = Lists.newArrayList(classnamesArr);
 	}
 
 	@Override
@@ -69,7 +69,7 @@ public class StoreToChests extends Feature {
 	
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		ModKeybinds.initDropoffKey();
 	}
 
@@ -91,23 +91,22 @@ public class StoreToChests extends Feature {
 
 			if(creativeInv == null && Minecraft.getMinecraft().player.capabilities.isCreativeMode)
 				return;
-			
+
+			if (ChestButtons.chestButtons == null)
+				ChestButtons.chestButtons = new ArrayList<>();
 			ChestButtons.chestButtons.clear();
-			
-			int left = guiInv.getGuiLeft();
-			int top = guiInv.getGuiTop();
 
 			Container container = guiInv.inventorySlots;
 			for(Slot s : container.inventorySlots)
 				if(creativeInv != null || s instanceof SlotCrafting) {
 					if(creativeInv == null)
-						ChestButtons.addButtonAndKeybind(event, Action.DROPOFF, guiInv, 13211, s.xPos + xPos, s.yPos + yPos, s, ModKeybinds.dropoffKey);
+						ChestButtons.addButtonAndKeybind(event, Action.DROPOFF, guiInv, 13211, s.xPos + xPos, s.yPos + yPos, ModKeybinds.dropoffKey);
 					else {
 						if(s.getSlotIndex() != 15)
 							continue;
 						
-						ChestButtons.<GuiContainerCreative>addButtonAndKeybind(event, Action.DROPOFF, guiInv, 13211, s.xPos + xPosC, s.yPos + yPosC, s, ModKeybinds.dropoffKey,
-								(gui) -> gui.getSelectedTabIndex() == CreativeTabs.INVENTORY.getTabIndex());
+						ChestButtons.addButtonAndKeybind(event, Action.DROPOFF, guiInv, 13211, s.xPos + xPosC, s.yPos + yPosC, ModKeybinds.dropoffKey,
+								(gui) -> ((GuiContainerCreative) gui).getSelectedTabIndex() == CreativeTabs.INVENTORY.getIndex());
 					}
 
 					break;
@@ -131,6 +130,8 @@ public class StoreToChests extends Feature {
 		GuiScreen gui = Minecraft.getMinecraft().currentScreen;
 		if(gui instanceof GuiInventory) {
 			GuiInventory inv = (GuiInventory) gui;
+			if (ChestButtons.chestButtons == null)
+				ChestButtons.chestButtons = new ArrayList<>();
 			for(GuiButtonChest b : ChestButtons.chestButtons) {
 				b.x = inv.getGuiLeft() + b.shiftX;
 				b.y = inv.getGuiTop() + b.shiftY;

@@ -10,14 +10,8 @@
  */
 package vazkii.quark.management.feature;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import net.minecraftforge.items.SlotItemHandler;
-import org.apache.logging.log4j.Level;
-
-import com.google.common.base.Predicate;
-
+import com.google.common.collect.Lists;
+import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.inventory.GuiChest;
@@ -30,15 +24,16 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.ContainerChest;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.GuiScreenEvent;
-import net.minecraftforge.fml.common.FMLLog;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import scala.actors.threadpool.Arrays;
+import net.minecraftforge.items.SlotItemHandler;
 import vazkii.arl.network.NetworkHandler;
 import vazkii.quark.api.IChestButtonCallback;
+import vazkii.quark.base.Quark;
 import vazkii.quark.base.client.ModKeybinds;
 import vazkii.quark.base.handler.DropoffHandler;
 import vazkii.quark.base.module.Feature;
@@ -49,14 +44,25 @@ import vazkii.quark.management.client.gui.GuiButtonChest;
 import vazkii.quark.management.client.gui.GuiButtonChest.Action;
 import vazkii.quark.management.client.gui.GuiButtonShulker;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
 public class ChestButtons extends Feature {
 
-	ButtonInfo deposit, smartDeposit, restock, extract, sort, sortPlayer;
-	
-	boolean debugClassnames;
-	List<String> classnames;
-	
-	static List<GuiButtonChest> chestButtons = new ArrayList();
+	public static ButtonInfo deposit, smartDeposit, restock, extract, sort, sortPlayer;
+
+	public static boolean debugClassnames;
+	public static List<String> classnames;
+	public static List<ResourceLocation> dropoffTiles;
+	public static boolean dropoffAnyChestTile;
+	public static boolean dropoffAnyChestBlock;
+	public static boolean dropoffAnyChestMod;
+
+	@SideOnly(Side.CLIENT)
+	public static List<GuiButtonChest> chestButtons;
 	
 	@Override
 	public void setupConfig() {
@@ -69,7 +75,39 @@ public class ChestButtons extends Feature {
 		
 		debugClassnames = loadPropBool("Debug Classnames", "Set this to true to print out the names of all GUIs you open to the log. This is used to fill in the \"Forced GUIs\" list.", false);
 		String[] classnamesArr = loadPropStringList("Forced GUIs", "GUIs in which the chest buttons should be forced to show up. Use the \"Debug Classnames\" option to find the names.", new String[0]);
-		classnames = new ArrayList(Arrays.asList(classnamesArr));
+		classnames = Lists.newArrayList(classnamesArr);
+
+		String[] dropoffArr = loadPropStringList("Dropoff Enabled Blocks",
+				"Blocks with inventories which do not explicitly accept dropoffs, but should be treated as though they do.",
+				new String[] { "minecraft:chest", "minecraft:trapped_chest", "minecraft:shulker_box" });
+		dropoffTiles = Arrays.stream(dropoffArr).map(ResourceLocation::new).collect(Collectors.toList());
+
+		dropoffAnyChestTile = loadPropBool("Dropoff to Any Chest Tile",
+				"Allow anything with 'chest' in its TileEntity identifier to be used as a dropoff inventory?", true);
+		dropoffAnyChestBlock = loadPropBool("Dropoff to Any Chest Block",
+				"Allow anything with 'chest' in its block identifier to be used as a dropoff inventory?", true);
+		dropoffAnyChestMod = loadPropBool("Dropoff to Any Chest Mod",
+				"Allow any block with 'chest' in its modid identifier to be used as a dropoff inventory?", true);
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	public static boolean overriddenDropoff(TileEntity tile) {
+		Block block = tile.getBlockType();
+		ResourceLocation blockType = block == null ? null : block.getRegistryName();
+		ResourceLocation tileType = TileEntity.getKey(tile.getClass());
+
+		if (blockType != null) {
+			if (dropoffTiles.contains(blockType))
+				return true;
+
+			if (dropoffAnyChestBlock && blockType.getPath().contains("chest"))
+				return true;
+
+			if (dropoffAnyChestMod && blockType.getNamespace().contains("chest"))
+				return true;
+		}
+
+		return tileType != null && dropoffAnyChestTile && tileType.getPath().contains("chest");
 	}
 	
 	private ButtonInfo loadButtonInfo(String name, String comment, int xShift, int yShift) {
@@ -84,7 +122,9 @@ public class ChestButtons extends Feature {
 	
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
+		if (chestButtons == null)
+			chestButtons = new ArrayList<>();
 		ModKeybinds.initChestKeys();
 	}
 	
@@ -97,7 +137,7 @@ public class ChestButtons extends Feature {
 			EntityPlayer player = Minecraft.getMinecraft().player;
 
 			if(debugClassnames)
-				FMLLog.log(Level.INFO, "[Quark] Opening GUI %s", guiInv.getClass().getName());
+				Quark.LOG.info("Opening GUI " + guiInv.getClass().getName());
 			
 			boolean accept = guiInv instanceof IChestButtonCallback || guiInv instanceof GuiChest || guiInv instanceof GuiShulkerBox 
 					|| classnames.contains(guiInv.getClass().getName());
@@ -119,21 +159,21 @@ public class ChestButtons extends Feature {
 			if(!accept)
 				return;
 
+
+			if (chestButtons == null)
+				chestButtons = new ArrayList<>();
 			chestButtons.clear();
-			
-			int guiLeft = guiInv.getGuiLeft();
-			int guiTop = guiInv.getGuiTop();
 
 			for(Slot s : container.inventorySlots)
 				if(s.inventory == player.inventory && s.getSlotIndex() == 9) {
-					addButtonAndKeybind(event, extract, Action.EXTRACT, guiInv, 13210, guiLeft, guiTop, s, ModKeybinds.chestExtractKey);
-					addButtonAndKeybind(event, restock, Action.RESTOCK, guiInv, 13211, guiLeft, guiTop, s, ModKeybinds.chestRestockKey);
-					addButtonAndKeybind(event, deposit, Action.DEPOSIT, guiInv, 13212, guiLeft, guiTop, s, ModKeybinds.chestDropoffKey);
-					addButtonAndKeybind(event, smartDeposit, Action.SMART_DEPOSIT, guiInv, 13213, guiLeft, guiTop, s, ModKeybinds.chestMergeKey);
+					addButtonAndKeybind(event, extract, Action.EXTRACT, guiInv, 13210, s, ModKeybinds.chestExtractKey);
+					addButtonAndKeybind(event, restock, Action.RESTOCK, guiInv, 13211, s, ModKeybinds.chestRestockKey);
+					addButtonAndKeybind(event, deposit, Action.DEPOSIT, guiInv, 13212, s, ModKeybinds.chestDropoffKey);
+					addButtonAndKeybind(event, smartDeposit, Action.SMART_DEPOSIT, guiInv, 13213, s, ModKeybinds.chestMergeKey);
 					
 					if(ModuleLoader.isFeatureEnabled(InventorySorting.class)) {
-						addButtonAndKeybind(event, sort, Action.SORT, guiInv, 13214, guiLeft, guiTop, s, ModKeybinds.chestSortKey);
-						addButtonAndKeybind(event, sortPlayer, Action.SORT_PLAYER, guiInv, 13215, guiLeft, guiTop, s, ModKeybinds.playerSortKey);
+						addButtonAndKeybind(event, sort, Action.SORT, guiInv, 13214, s, ModKeybinds.chestSortKey);
+						addButtonAndKeybind(event, sortPlayer, Action.SORT_PLAYER, guiInv, 13215, s, ModKeybinds.playerSortKey);
 					}
 					
 					break;
@@ -142,25 +182,25 @@ public class ChestButtons extends Feature {
 	}
 	
 	@SideOnly(Side.CLIENT)
-	public static void addButtonAndKeybind(GuiScreenEvent.InitGuiEvent.Post event, ButtonInfo info, Action action, GuiContainer guiInv, int index, int guiLeft, int guiTop, Slot s, KeyBinding kb) {
+	public static void addButtonAndKeybind(GuiScreenEvent.InitGuiEvent.Post event, ButtonInfo info, Action action, GuiContainer guiInv, int index, Slot s, KeyBinding kb) {
 		if(info.enabled)
-			addButtonAndKeybind(event, action, guiInv, index, info.xShift, s.yPos + info.yShift, s, kb);
+			addButtonAndKeybind(event, action, guiInv, index, info.xShift, s.yPos + info.yShift, kb);
 	}
 
 	@SideOnly(Side.CLIENT)
-	public static void addButtonAndKeybind(GuiScreenEvent.InitGuiEvent.Post event, Action action, GuiContainer guiInv, int index, int x, int y, Slot s, KeyBinding kb) {
-		addButtonAndKeybind(event, action, guiInv, index, x, y, s, kb, null);
+	public static void addButtonAndKeybind(GuiScreenEvent.InitGuiEvent.Post event, Action action, GuiContainer guiInv, int index, int x, int y, KeyBinding kb) {
+		addButtonAndKeybind(event, action, guiInv, index, x, y, kb, null);
 	}
 
 	@SideOnly(Side.CLIENT)
-	public static <T extends GuiScreen>void addButtonAndKeybind(GuiScreenEvent.InitGuiEvent.Post event, Action action, GuiContainer guiInv, int index, int x, int y, Slot s, KeyBinding kb, Predicate<T> pred) {
+	public static void addButtonAndKeybind(GuiScreenEvent.InitGuiEvent.Post event, Action action, GuiContainer guiInv, int index, int x, int y, KeyBinding kb, Predicate<GuiScreen> predicate) {
 		int left = guiInv.getGuiLeft();
 		int top = guiInv.getGuiTop();
 		
 		GuiButtonChest button;
 		if(guiInv instanceof GuiShulkerBox)
 			button = new GuiButtonShulker((GuiShulkerBox) guiInv, action, index, x, y, left, top);
-		else button = new GuiButtonChest(guiInv, action, index, x, y, left, top, pred);
+		else button = new GuiButtonChest(guiInv, action, index, x, y, left, top, predicate);
 		
 		if(guiInv instanceof IChestButtonCallback && !((IChestButtonCallback) guiInv).onAddChestButton(button, action.ordinal()))
 			return;
@@ -171,7 +211,9 @@ public class ChestButtons extends Feature {
 			if(chestInv.getName().equals(Blocks.ENDER_CHEST.getLocalizedName()))
 				button.setEnder(true);
 		}
-		
+
+		if (chestButtons == null)
+			chestButtons = new ArrayList<>();
 		chestButtons.add(button);
 		event.getButtonList().add(button);
 		if(kb != null)
@@ -218,8 +260,8 @@ public class ChestButtons extends Feature {
 	}
 	
 	private static class ButtonInfo {
-		boolean enabled;
-		int xShift, yShift;
+		private boolean enabled;
+		private int xShift, yShift;
 	}
 
 }

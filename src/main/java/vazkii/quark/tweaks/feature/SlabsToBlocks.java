@@ -10,11 +10,6 @@
  */
 package vazkii.quark.tweaks.feature;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockSlab;
 import net.minecraft.block.state.IBlockState;
@@ -27,20 +22,24 @@ import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.item.crafting.ShapedRecipes;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.oredict.OreDictionary;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 import vazkii.arl.recipe.MultiRecipe;
 import vazkii.arl.recipe.RecipeHandler;
-import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.module.Feature;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static vazkii.quark.tweaks.feature.StairsMakeMore.findResult;
 
 public class SlabsToBlocks extends Feature {
 
-	public static Map<IBlockState, ItemStack> slabs = new HashMap();
-	
-	int originalSize;
+	public static final Map<IBlockState, ItemStack> slabs = new HashMap<>();
+
+	public static int originalSize;
 	private MultiRecipe multiRecipe;
 	
 	@Override
@@ -49,50 +48,30 @@ public class SlabsToBlocks extends Feature {
 	}
 	
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {
+	public void postPreInit() {
 		multiRecipe = new MultiRecipe(new ResourceLocation("quark", "slabs_to_blocks"));
 	}
 	
 	@Override
-	public void postInit(FMLPostInitializationEvent event) {
-		List<ResourceLocation> recipeList = new ArrayList(CraftingManager.REGISTRY.getKeys());
+	@SuppressWarnings("deprecation")
+	public void postInit() {
+		List<ResourceLocation> recipeList = new ArrayList<>(CraftingManager.REGISTRY.getKeys());
 		for(ResourceLocation res : recipeList) {
 			IRecipe recipe = CraftingManager.REGISTRY.getObject(res);
 			if(recipe instanceof ShapedRecipes || recipe instanceof ShapedOreRecipe) {
 				NonNullList<Ingredient> recipeItems;
 				if(recipe instanceof ShapedRecipes)
 					recipeItems = ((ShapedRecipes) recipe).recipeItems;
-				else recipeItems = ((ShapedOreRecipe) recipe).getIngredients();
+				else recipeItems = recipe.getIngredients();
 
 				ItemStack output = recipe.getRecipeOutput();
 				if(!output.isEmpty() && output.getCount() == originalSize) {
 					Item outputItem = output.getItem();
 					Block outputBlock = Block.getBlockFromItem(outputItem);
-					if(outputBlock != null && outputBlock instanceof BlockSlab) {
-						ItemStack outStack = ItemStack.EMPTY;
-						int inputItems = 0;
+					if(outputBlock instanceof BlockSlab) {
+						ItemStack outStack = findResult(recipeItems, 3);
 
-						for(Ingredient ingredient : recipeItems) {
-							ItemStack recipeItem = ItemStack.EMPTY;
-							ItemStack[] matches = ingredient.getMatchingStacks();
-							if(matches.length > 0)
-								recipeItem = matches[0];
-							
-							if(recipeItem != null && !((ItemStack) recipeItem).isEmpty()) {
-								ItemStack recipeStack = (ItemStack) recipeItem;
-								if(outStack.isEmpty())
-									outStack = recipeStack;
-								
-								if(ItemStack.areItemsEqual(outStack, recipeStack))
-									inputItems++;
-								else {
-									outStack = ItemStack.EMPTY;
-									break;
-								}
-							}
-						}
-
-						if(!outStack.isEmpty() && inputItems == 3) {
+						if(!outStack.isEmpty()) {
 							ItemStack outCopy = outStack.copy();
 							if(outCopy.getItemDamage() == OreDictionary.WILDCARD_VALUE)
 								outCopy.setItemDamage(0);
@@ -104,7 +83,7 @@ public class SlabsToBlocks extends Feature {
 								slabs.put(block.getStateFromMeta(outCopy.getItemDamage()), in);
 							}
 							
-							RecipeHandler.addShapelessOreDictRecipe(multiRecipe, outCopy, in, in);
+							RecipeHandler.addShapedRecipe(multiRecipe, outCopy, "SS", 'S', in);
 						}
 					}
 				}

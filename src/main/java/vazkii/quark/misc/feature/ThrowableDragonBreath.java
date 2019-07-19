@@ -39,8 +39,8 @@ public class ThrowableDragonBreath extends Feature {
 	
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
-		RenderingRegistry.registerEntityRenderingHandler(EntityDragonBreathBottle.class, renderManager -> new RenderSnowball(renderManager, Items.DRAGON_BREATH, Minecraft.getMinecraft().getRenderItem()));
+	public void preInitClient() {
+		RenderingRegistry.registerEntityRenderingHandler(EntityDragonBreathBottle.class, renderManager -> new RenderSnowball<>(renderManager, Items.DRAGON_BREATH, Minecraft.getMinecraft().getRenderItem()));
 	}
 	
 	@SubscribeEvent
@@ -54,7 +54,7 @@ public class ThrowableDragonBreath extends Feature {
 		if(!player.capabilities.isCreativeMode)
 			stack.shrink(1);
 
-		world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 0.5F, 0.4F / (world.rand.nextFloat() * 0.4F + 0.8F));
+		world.playSound(null, player.posX, player.posY, player.posZ, SoundEvents.ENTITY_SPLASH_POTION_THROW, SoundCategory.PLAYERS, 0.5F, 0.4F / (world.rand.nextFloat() * 0.4F + 0.8F));
 
 		if(!world.isRemote) {
 			EntityDragonBreathBottle b = new EntityDragonBreathBottle(world, player);

@@ -10,9 +10,6 @@
  */
 package vazkii.quark.world.feature;
 
-import java.util.Arrays;
-import java.util.List;
-
 import net.minecraft.block.Block;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.entity.monster.EntityBlaze;
@@ -23,17 +20,20 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.biome.Biome.SpawnListEntry;
 import net.minecraftforge.common.BiomeDictionary;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import vazkii.quark.base.module.Feature;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+
 public class NaturalBlazesInNether extends Feature {
 
-	int weight, min, max;
-	boolean restrictToNetherrack;
-	
-	List<String> allowedBlocks;
+	public static int weight, min, max;
+	public static boolean restrictToNetherrack;
+
+	public static List<String> allowedBlocks;
 
 	@Override
 	public void setupConfig() {
@@ -43,15 +43,15 @@ public class NaturalBlazesInNether extends Feature {
 		
 		restrictToNetherrack = loadPropBool("Block restrictions", "Make naturally spawned blazes only spawn in allowed blocks", true);
 		allowedBlocks = Arrays.asList(loadPropStringList("Allowed spawn blocks", "Only used if \" Block restrictions\" is enabled.", new String[] {
-				Blocks.NETHERRACK.getRegistryName().toString(),
-				Blocks.SOUL_SAND.getRegistryName().toString(),
-				Blocks.MAGMA.getRegistryName().toString(),
+				Objects.toString(Blocks.NETHERRACK.getRegistryName()),
+				Objects.toString(Blocks.SOUL_SAND.getRegistryName()),
+						Objects.toString(Blocks.MAGMA.getRegistryName()),
 				"quark:basalt"
 		}));
 	}
 
 	@Override
-	public void init(FMLInitializationEvent event) {
+	public void init() {
 		SpawnListEntry blazeEntry = new SpawnListEntry(EntityBlaze.class, weight, min, max);
 		BiomeDictionary.getBiomes(BiomeDictionary.Type.NETHER).forEach(biome -> biome.getSpawnableList(EnumCreatureType.MONSTER).add(blazeEntry));
 	}

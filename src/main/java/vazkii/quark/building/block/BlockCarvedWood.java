@@ -13,10 +13,16 @@ package vazkii.quark.building.block;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.IStringSerializable;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.IBlockAccess;
 import vazkii.arl.block.BlockMetaVariants;
 import vazkii.quark.base.block.IQuarkBlock;
 
-public class BlockCarvedWood extends BlockMetaVariants implements IQuarkBlock {
+import java.util.Locale;
+
+public class BlockCarvedWood extends BlockMetaVariants<BlockCarvedWood.Variants> implements IQuarkBlock {
 
 	public BlockCarvedWood() {
 		super("carved_wood", Material.WOOD, Variants.class);
@@ -26,13 +32,28 @@ public class BlockCarvedWood extends BlockMetaVariants implements IQuarkBlock {
 		setCreativeTab(CreativeTabs.BUILDING_BLOCKS);
 	}
 
-	public enum Variants implements EnumBase {
+	@Override
+	public int getFlammability(IBlockAccess world, BlockPos pos, EnumFacing face) {
+		return 20;
+	}
+
+	@Override
+	public int getFireSpreadSpeed(IBlockAccess world, BlockPos pos, EnumFacing face) {
+		return 5;
+	}
+
+	public enum Variants implements IStringSerializable {
 		CARVED_OAK_WOOD,
 		CARVED_SPRUCE_WOOD,
 		CARVED_BIRCH_WOOD,
 		CARVED_JUNGLE_WOOD,
 		CARVED_ACACIA_WOOD,
-		CARVED_DARK_OAK_WOOD
+		CARVED_DARK_OAK_WOOD;
+
+		@Override
+		public String getName() {
+			return name().toLowerCase(Locale.ROOT);
+		}
 	}
 
 }

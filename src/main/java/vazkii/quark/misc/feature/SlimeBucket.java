@@ -10,8 +10,6 @@
  */
 package vazkii.quark.misc.feature;
 
-import com.sun.jna.platform.win32.WinDef.WORD;
-
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.monster.EntitySlime;
@@ -22,10 +20,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumHand;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.oredict.OreDictionary;
 import vazkii.arl.util.ItemNBTHelper;
 import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.module.Feature;
@@ -33,13 +29,21 @@ import vazkii.quark.misc.item.ItemSlimeBucket;
 
 public class SlimeBucket extends Feature {
 
+	public static boolean oredict;
+
 	public static Item slime_bucket;
+
+	@Override
+	public void setupConfig() {
+		oredict = loadPropBool("Slime bucket is a slimeball", "", true);
+	}
 
 	@Override
 	public void preInit(FMLPreInitializationEvent event) {
 		slime_bucket = new ItemSlimeBucket();
 		
-		addOreDict("slimeball", slime_bucket);
+		if (oredict)
+			addOreDict("slimeball", slime_bucket);
 	}
 	
 	@SubscribeEvent
@@ -57,8 +61,7 @@ public class SlimeBucket extends Feature {
 
 				if(!stack.isEmpty() && stack.getItem() == Items.BUCKET) {
 					ItemStack outStack = ProxyRegistry.newStack(slime_bucket);
-					NBTTagCompound cmp = new NBTTagCompound();
-					event.getTarget().writeToNBT(cmp);
+					NBTTagCompound cmp = event.getTarget().serializeNBT();
 					ItemNBTHelper.setCompound(outStack, ItemSlimeBucket.TAG_ENTITY_DATA, cmp);
 					
 					if(stack.getCount() == 1)

@@ -1,8 +1,5 @@
 package vazkii.quark.automation.feature;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockDirectional;
 import net.minecraft.block.state.BlockPistonStructureHelper;
@@ -18,11 +15,14 @@ import vazkii.quark.automation.block.BlockIronRod;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.ModuleLoader;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class PistonSpikes extends Feature {
 
 	public static Block iron_rod;
 
-	boolean ezRecipe;
+	public static boolean ezRecipe;
 	
 	@Override
 	public void setupConfig() {
@@ -47,8 +47,8 @@ public class PistonSpikes extends Feature {
 		List<BlockPos> destroyList = helper.getBlocksToDestroy();
 		
 		boolean did = false;
-		List<BlockPos> newMoveList = new ArrayList(moveList);
-		List<BlockPos> newDestroyList = new ArrayList(destroyList);
+		List<BlockPos> newMoveList = new ArrayList<>(moveList);
+		List<BlockPos> newDestroyList = new ArrayList<>(destroyList);
 		EnumFacing oppositeFacing = facing.getOpposite();
 		
 		for(BlockPos pos : moveList) {
@@ -71,13 +71,11 @@ public class PistonSpikes extends Feature {
 					if(i >= 2) {
 						if(i == 2) {
 							newDestroyList.add(off);
-							if(newMoveList.contains(off))
-								newMoveList.remove(off);
+							newMoveList.remove(off);
 						} else {
 							if(newMoveList.contains(off))
 								newMoveList.remove(off);
-							else if(newDestroyList.contains(off))
-								newDestroyList.remove(off);
+							else newDestroyList.remove(off);
 						}
 					}
 

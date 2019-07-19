@@ -1,15 +1,8 @@
 package vazkii.quark.automation.feature;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
-
-import org.apache.commons.lang3.tuple.Pair;
-
+import com.google.common.collect.Lists;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockChest;
 import net.minecraft.block.BlockJukebox;
 import net.minecraft.block.state.BlockPistonStructureHelper;
 import net.minecraft.block.state.IBlockState;
@@ -22,14 +15,17 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
 import net.minecraftforge.fml.common.gameevent.TickEvent.WorldTickEvent;
+import org.apache.commons.lang3.tuple.Pair;
 import vazkii.quark.api.IPistonCallback;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.ModuleLoader;
 
+import java.util.*;
+
 public class PistonsMoveTEs extends Feature {
 
-	private static WeakHashMap<World, Map<BlockPos, TileEntity>> movements = new WeakHashMap();
-	private static WeakHashMap<World, List<Pair<BlockPos, TileEntity>>> delayedUpdates = new WeakHashMap();
+	private static final WeakHashMap<World, Map<BlockPos, TileEntity>> movements = new WeakHashMap<>();
+	private static final WeakHashMap<World, List<Pair<BlockPos, TileEntity>>> delayedUpdates = new WeakHashMap<>();
 
 	public static List<String> renderBlacklist;
 	public static List<String> movementBlacklist;
@@ -44,9 +40,9 @@ public class PistonsMoveTEs extends Feature {
 		String[] delayedUpdateListArray = loadPropStringList("Delayed Update List", "List of blocks whose tile entity update should be delayed by one tick after placed to prevent corruption.", 
 				new String[] { "minecraft:dispenser", "minecraft:dropper" });
 		
-		renderBlacklist = new ArrayList(Arrays.asList(renderBlacklistArray));
-		movementBlacklist = new ArrayList(Arrays.asList(movementBlacklistArray));
-		delayedUpdateList = new ArrayList(Arrays.asList(delayedUpdateListArray));
+		renderBlacklist = Lists.newArrayList(renderBlacklistArray);
+		movementBlacklist = Lists.newArrayList(movementBlacklistArray);
+		delayedUpdateList = Lists.newArrayList(delayedUpdateListArray);
 	}
 	
 	@SubscribeEvent
@@ -71,15 +67,19 @@ public class PistonsMoveTEs extends Feature {
 		if(!ModuleLoader.isFeatureEnabled(PistonsMoveTEs.class))
 			return te;
 		
+		return shouldMoveTE(state);
+	}
+	
+	public static boolean shouldMoveTE(IBlockState state) {
 		// Jukeboxes that are playing can't be moved so the music can be stopped
 		if(state.getPropertyKeys().contains(BlockJukebox.HAS_RECORD) && state.getValue(BlockJukebox.HAS_RECORD))
 			return true;
 		
 		ResourceLocation res = Block.REGISTRY.getNameForObject(state.getBlock());
-		return PistonsMoveTEs.movementBlacklist.contains(res.toString()) || PistonsMoveTEs.movementBlacklist.contains(res.getResourceDomain());
+		return PistonsMoveTEs.movementBlacklist.contains(res.toString()) || PistonsMoveTEs.movementBlacklist.contains(res.getNamespace());
 	}
 	
-	public static void detachTileEntities(World world, BlockPos sourcePos, BlockPistonStructureHelper helper, EnumFacing facing, boolean extending) {
+	public static void detachTileEntities(World world, BlockPistonStructureHelper helper, EnumFacing facing) {
 		if(!ModuleLoader.isFeatureEnabled(PistonsMoveTEs.class))
 			return;
 		
@@ -89,12 +89,14 @@ public class PistonsMoveTEs extends Feature {
 			IBlockState state = world.getBlockState(pos);
 			if(state.getBlock().hasTileEntity(state)) {
 				TileEntity tile = world.getTileEntity(pos);
-				if(tile instanceof IPistonCallback)
-					((IPistonCallback) tile).onPistonMovementStarted();
-				
-				world.removeTileEntity(pos);
-				
-				registerMovement(world, pos.offset(facing), tile);
+				if (tile != null) {
+					if (IPistonCallback.hasCallback(tile))
+						IPistonCallback.getCallback(tile).onPistonMovementStarted();
+
+					world.removeTileEntity(pos);
+
+					registerMovement(world, pos.offset(facing), tile);
+				}
 			}
 		}
 	}
@@ -139,6 +141,10 @@ public class PistonsMoveTEs extends Feature {
 				else {
 					world.setTileEntity(pos, tile);
 					tile.updateContainingBlockInfo();
+
+					if(block instanceof BlockChest)
+						((BlockChest) block).checkForSurroundingChests(world, pos, state);
+					
 				}
 			}
 			world.notifyNeighborsOfStateChange(pos, block, true);
@@ -149,7 +155,7 @@ public class PistonsMoveTEs extends Feature {
 	
 	private static void registerMovement(World world, BlockPos pos, TileEntity tile) {
 		if(!movements.containsKey(world))
-			movements.put(world, new HashMap());
+			movements.put(world, new HashMap<>());
 		
 		movements.get(world).put(pos, tile);
 	}
@@ -176,8 +182,8 @@ public class PistonsMoveTEs extends Feature {
 	private static TileEntity getAndClearMovement(World world, BlockPos pos) {
 		TileEntity tile = getMovement(world, pos, true);
 		if(tile != null) {
-			if(tile instanceof IPistonCallback)
-				((IPistonCallback) tile).onPistonMovementFinished();
+			if (IPistonCallback.hasCallback(tile))
+				IPistonCallback.getCallback(tile).onPistonMovementFinished();
 			
 			tile.validate();
 			
@@ -190,7 +196,7 @@ public class PistonsMoveTEs extends Feature {
 	
 	private static void registerDelayedUpdate(World world, BlockPos pos, TileEntity tile) {
 		if(!delayedUpdates.containsKey(world))
-			delayedUpdates.put(world, new ArrayList());
+			delayedUpdates.put(world, new ArrayList<>());
 		
 		delayedUpdates.get(world).add(Pair.of(pos, tile));
 	}

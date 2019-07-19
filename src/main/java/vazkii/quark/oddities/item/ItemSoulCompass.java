@@ -1,13 +1,12 @@
 package vazkii.quark.oddities.item;
 
-import javax.annotation.Nullable;
-
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItemFrame;
 import net.minecraft.item.IItemPropertyGetter;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -19,17 +18,19 @@ import vazkii.arl.util.ItemNBTHelper;
 import vazkii.quark.base.item.IQuarkItem;
 import vazkii.quark.oddities.feature.TotemOfHolding;
 
+import javax.annotation.Nonnull;
+
 public class ItemSoulCompass extends ItemMod implements IQuarkItem, IItemPropertyGetter {
 
 	private static final String TAG_POS_X = "posX";
 	private static final String TAG_POS_Y = "posY";
 	private static final String TAG_POS_Z = "posZ";
 	
-    @SideOnly(Side.CLIENT)
-    double rotation, rota;
-    
-    @SideOnly(Side.CLIENT)
-    long lastUpdateTick;
+	@SideOnly(Side.CLIENT)
+	private static double rotation, rota;
+
+	@SideOnly(Side.CLIENT)
+	private static long lastUpdateTick;
 	
 	public ItemSoulCompass() {
 		super("soul_compass");
@@ -61,59 +62,65 @@ public class ItemSoulCompass extends ItemMod implements IQuarkItem, IItemPropert
 	}
 
 	@Override
-    @SideOnly(Side.CLIENT)
-    public float apply(ItemStack stack, World world, EntityLivingBase entityIn) {
-        if(entityIn == null && !stack.isOnItemFrame())
-            return 0;
-        
-        else {
-            boolean hasEntity = entityIn != null;
-            Entity entity = (Entity)(hasEntity ? entityIn : stack.getItemFrame());
+	@SideOnly(Side.CLIENT)
+	public float apply(@Nonnull ItemStack stack, World world, EntityLivingBase entityIn) {
+		if(entityIn == null && !stack.isOnItemFrame())
+			return 0;
 
-            if(world == null)
-                world = entity.world;
+		else {
+			boolean hasEntity = entityIn != null;
+			Entity entity = (hasEntity ? entityIn : stack.getItemFrame());
 
-            double angle;
-            BlockPos pos = getPos(stack);
-            
-            if(pos.getY() == world.provider.getDimension()) {
-                double yaw = hasEntity ? entity.rotationYaw : getFrameRotation((EntityItemFrame) entity);
-                yaw = MathHelper.positiveModulo(yaw / 360.0, 1.0);
-                double relAngle = getDeathToAngle(entity, pos) / (Math.PI * 2);
-                angle = 0.5 - (yaw - 0.25 - relAngle);
-            }
-            else angle = Math.random();
+			if (entity == null)
+				return 0;
 
-            if (hasEntity)
-                angle = wobble(world, angle);
+			if(world == null)
+				world = entity.world;
 
-            return MathHelper.positiveModulo((float) angle, 1.0F);
-        }
-    }
-    @SideOnly(Side.CLIENT)
-    private double wobble(World worldIn, double angle) {
-        if(worldIn.getTotalWorldTime() != lastUpdateTick) {
-            lastUpdateTick = worldIn.getTotalWorldTime();
-            double relAngle = angle - rotation;
-            relAngle = MathHelper.positiveModulo(relAngle + 0.5, 1.0) - 0.5;
-            rota += relAngle * 0.1;
-            rota *= 0.8;
-            rotation = MathHelper.positiveModulo(rotation + rota, 1.0);
-        }
+			double angle;
+			BlockPos pos = getPos(stack);
 
-        return rotation;
-    }
-    
-    @SideOnly(Side.CLIENT)
-    private double getFrameRotation(EntityItemFrame frame) {
-        return MathHelper.wrapDegrees(180 + frame.facingDirection.getHorizontalIndex() * 90);
-    }
-    
-    @SideOnly(Side.CLIENT)
-    private double getDeathToAngle(Entity entity, BlockPos blockpos) {
-        return Math.atan2(blockpos.getZ() - entity.posZ, blockpos.getX() - entity.posX);
-    }
-    
+			if(pos.getY() == world.provider.getDimension()) {
+				double yaw = hasEntity ? entity.rotationYaw : getFrameRotation((EntityItemFrame) entity);
+				yaw = MathHelper.positiveModulo(yaw / 360.0, 1.0);
+				double relAngle = getDeathToAngle(entity, pos) / (Math.PI * 2);
+				angle = 0.5 - (yaw - 0.25 - relAngle);
+			}
+			else angle = Math.random();
+
+			if (hasEntity)
+				angle = wobble(world, angle);
+
+			return MathHelper.positiveModulo((float) angle, 1.0F);
+		}
+	}
+	@SideOnly(Side.CLIENT)
+	private double wobble(World worldIn, double angle) {
+		if(worldIn.getTotalWorldTime() != lastUpdateTick) {
+			lastUpdateTick = worldIn.getTotalWorldTime();
+			double relAngle = angle - rotation;
+			relAngle = MathHelper.positiveModulo(relAngle + 0.5, 1.0) - 0.5;
+			rota += relAngle * 0.1;
+			rota *= 0.8;
+			rotation = MathHelper.positiveModulo(rotation + rota, 1.0);
+		}
+
+		return rotation;
+	}
+
+	@SideOnly(Side.CLIENT)
+	private double getFrameRotation(EntityItemFrame frame) {
+		EnumFacing facing = frame.facingDirection;
+		if (facing == null)
+			facing = EnumFacing.NORTH;
+		return MathHelper.wrapDegrees(180 + facing.getHorizontalAngle());
+	}
+
+	@SideOnly(Side.CLIENT)
+	private double getDeathToAngle(Entity entity, BlockPos blockpos) {
+		return Math.atan2(blockpos.getZ() - entity.posZ, blockpos.getX() - entity.posX);
+	}
+
 
 }
 

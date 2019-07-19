@@ -14,6 +14,7 @@ import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import org.lwjgl.opengl.GL11;
 
 public class GuiButtonTranslucent extends GuiButton {
 
@@ -26,17 +27,20 @@ public class GuiButtonTranslucent extends GuiButton {
 		drawRect(x, y, x + width, y + height, Integer.MIN_VALUE);
 	}
 	
-    public void drawActualTexturedModalRect(int x, int y, int textureX, int textureY, int width, int height) {
-        float f = 0.00390625F;
-        float f1 = 0.00390625F;
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder bufferbuilder = tessellator.getBuffer();
-        bufferbuilder.begin(7, DefaultVertexFormats.POSITION_TEX);
-        bufferbuilder.pos((double)(x + 0), (double)(y + height), (double)this.zLevel).tex((double)((float)(textureX + 0) * 0.00390625F), (double)((float)(textureY + height) * 0.00390625F)).endVertex();
-        bufferbuilder.pos((double)(x + width), (double)(y + height), (double)this.zLevel).tex((double)((float)(textureX + width) * 0.00390625F), (double)((float)(textureY + height) * 0.00390625F)).endVertex();
-        bufferbuilder.pos((double)(x + width), (double)(y + 0), (double)this.zLevel).tex((double)((float)(textureX + width) * 0.00390625F), (double)((float)(textureY + 0) * 0.00390625F)).endVertex();
-        bufferbuilder.pos((double)(x + 0), (double)(y + 0), (double)this.zLevel).tex((double)((float)(textureX + 0) * 0.00390625F), (double)((float)(textureY + 0) * 0.00390625F)).endVertex();
-        tessellator.draw();
-    }
+	public void drawActualTexturedModalRect(int x, int y, int textureX, int textureY, int width, int height) {
+		float f = 0.00390625f;
+		Tessellator tessellator = Tessellator.getInstance();
+		BufferBuilder bufferbuilder = tessellator.getBuffer();
+		bufferbuilder.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
+		bufferbuilder.pos(x, y + height, this.zLevel)
+				.tex(textureX * f, (textureY + height) * f).endVertex();
+		bufferbuilder.pos(x + width, y + height, this.zLevel)
+				.tex((textureX + width) * f, (textureY + height) * f).endVertex();
+		bufferbuilder.pos(x + width, y, this.zLevel)
+				.tex((textureX + width) * f, textureY * f).endVertex();
+		bufferbuilder.pos(x, y, this.zLevel)
+				.tex(textureX * f, textureY * f).endVertex();
+		tessellator.draw();
+	}
 
 }

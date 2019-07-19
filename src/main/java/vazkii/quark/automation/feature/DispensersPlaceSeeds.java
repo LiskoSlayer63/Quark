@@ -10,14 +10,7 @@
  */
 package vazkii.quark.automation.feature;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockDispenser;
-import net.minecraft.block.BlockHorizontal;
-import net.minecraft.block.BlockOldLog;
-import net.minecraft.block.BlockPlanks;
+import net.minecraft.block.*;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.dispenser.BehaviorDefaultDispenseItem;
 import net.minecraft.dispenser.IBehaviorDispenseItem;
@@ -30,14 +23,17 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import vazkii.quark.base.module.ConfigHelper;
 import vazkii.quark.base.module.Feature;
 
+import javax.annotation.Nonnull;
+import java.util.HashMap;
+import java.util.Map;
+
 public class DispensersPlaceSeeds extends Feature {
 
-	String[] customSeedsArr;
-	Map<Item, IBlockState> customSeeds;
+	public static String[] customSeedsArr;
+	public static Map<Item, IBlockState> customSeeds;
 	
 	@Override
 	public void setupConfig() {
@@ -46,7 +42,7 @@ public class DispensersPlaceSeeds extends Feature {
 	}
 	
 	@Override
-	public void init(FMLInitializationEvent event) {
+	public void init() {
 		BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(Items.WHEAT_SEEDS, new BehaviourSeeds(Blocks.WHEAT));
 		BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(Items.POTATO, new BehaviourSeeds(Blocks.POTATOES));
 		BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(Items.CARROT, new BehaviourSeeds(Blocks.CARROTS));
@@ -60,9 +56,10 @@ public class DispensersPlaceSeeds extends Feature {
 		
 		setupCustomSeeds();
 	}
-	
+
+	@SuppressWarnings("deprecation")
 	public void setupCustomSeeds() {
-		customSeeds = new HashMap();
+		customSeeds = new HashMap<>();
 		for(String s : customSeedsArr) {
 			String[] tokens = s.split("=");
 			if(tokens.length == 2) {
@@ -81,7 +78,7 @@ public class DispensersPlaceSeeds extends Feature {
 									customSeeds.put(item, block.getDefaultState());
 								else customSeeds.put(item, block.getStateFromMeta(meta));
 							}
-						} catch(NumberFormatException e) { }
+						} catch(NumberFormatException ignored) { }
 				}
 			}
 		}
@@ -112,6 +109,7 @@ public class DispensersPlaceSeeds extends Feature {
 			placeState = state;
 		}
 
+		@Nonnull
 		@Override
 		public ItemStack dispenseStack(IBlockSource par1IBlockSource, ItemStack par2ItemStack) {
 			EnumFacing facing = par1IBlockSource.getBlockState().getValue(BlockDispenser.FACING);
@@ -131,11 +129,12 @@ public class DispensersPlaceSeeds extends Feature {
 
 	public class BehaviourCocoaBeans extends BehaviorDefaultDispenseItem {
 
-		IBehaviorDispenseItem vanillaBehaviour;
+		private final IBehaviorDispenseItem vanillaBehaviour;
 		public BehaviourCocoaBeans(IBehaviorDispenseItem vanilla) {
 			vanillaBehaviour = vanilla;
 		}
 
+		@Nonnull
 		@Override
 		public ItemStack dispenseStack(IBlockSource par1IBlockSource, ItemStack par2ItemStack) {
 			if(par2ItemStack.getItemDamage() == EnumDyeColor.BROWN.getDyeDamage()) {

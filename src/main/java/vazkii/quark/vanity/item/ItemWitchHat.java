@@ -16,11 +16,14 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.EnumRarity;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.IRarity;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.arl.item.ItemModArmor;
 import vazkii.quark.base.item.IQuarkItem;
 import vazkii.quark.vanity.client.model.ModelWitchHat;
+
+import javax.annotation.Nonnull;
 
 public class ItemWitchHat extends ItemModArmor implements IQuarkItem {
 
@@ -41,7 +44,7 @@ public class ItemWitchHat extends ItemModArmor implements IQuarkItem {
 	}
 
 	@Override
-	public boolean hasColor(ItemStack stack) {
+	public boolean hasColor(@Nonnull ItemStack stack) {
 		return false;
 	}
 
@@ -51,8 +54,9 @@ public class ItemWitchHat extends ItemModArmor implements IQuarkItem {
 		return "textures/entity/witch.png";
 	}
 
+	@Nonnull
 	@Override
-	public EnumRarity getRarity(ItemStack stack) {
+	public IRarity getForgeRarity(@Nonnull ItemStack stack) {
 		return EnumRarity.RARE;
 	}
 

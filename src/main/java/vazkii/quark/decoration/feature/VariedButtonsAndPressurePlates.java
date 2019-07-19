@@ -2,9 +2,7 @@ package vazkii.quark.decoration.feature;
 
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.oredict.OreDictionary;
 import vazkii.arl.recipe.RecipeHandler;
 import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.handler.RecipeProcessor;
@@ -20,8 +18,8 @@ public class VariedButtonsAndPressurePlates extends Feature {
 	public static Block acacia_pressure_plate, acacia_button;
 	public static Block dark_oak_pressure_plate, dark_oak_button;
 
-	boolean renameVanillaBlocks;
-	boolean enablePressurePlates, enableButtons;
+	public static boolean renameVanillaBlocks;
+	public static boolean enablePressurePlates, enableButtons;
 
 	@Override
 	public void setupConfig() {
@@ -52,7 +50,7 @@ public class VariedButtonsAndPressurePlates extends Feature {
 	}
 
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {
+	public void postPreInit() {
 		if(enablePressurePlates) {
 	 		RecipeProcessor.addWoodReplacements(1, Blocks.WOODEN_PRESSURE_PLATE);
 			
@@ -68,7 +66,7 @@ public class VariedButtonsAndPressurePlates extends Feature {
 					"WW", 'W', ProxyRegistry.newStack(Blocks.PLANKS, 1, 5));
 
 			if(renameVanillaBlocks)
-				Blocks.WOODEN_PRESSURE_PLATE.setUnlocalizedName("oak_pressure_plate");
+				Blocks.WOODEN_PRESSURE_PLATE.setTranslationKey("oak_pressure_plate");
 		}
 		
 		if(enableButtons) {
@@ -81,7 +79,7 @@ public class VariedButtonsAndPressurePlates extends Feature {
 			RecipeHandler.addShapelessOreDictRecipe(ProxyRegistry.newStack(dark_oak_button, 1), ProxyRegistry.newStack(Blocks.PLANKS, 1, 5));
 
 			if(renameVanillaBlocks)
-				Blocks.WOODEN_BUTTON.setUnlocalizedName("oak_button");
+				Blocks.WOODEN_BUTTON.setTranslationKey("oak_button");
 		}
 	}
 	

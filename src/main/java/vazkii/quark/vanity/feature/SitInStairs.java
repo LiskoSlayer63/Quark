@@ -10,9 +10,6 @@
  */
 package vazkii.quark.vanity.feature;
 
-import java.util.List;
-
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockStairs;
 import net.minecraft.block.BlockStairs.EnumHalf;
 import net.minecraft.block.state.IBlockState;
@@ -26,14 +23,23 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
-import net.minecraftforge.fml.common.registry.EntityRegistry.EntityRegistration;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import vazkii.arl.network.NetworkHandler;
 import vazkii.quark.base.Quark;
+import vazkii.quark.base.client.RenderBlank;
 import vazkii.quark.base.lib.LibEntityIDs;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.base.module.Feature;
+import vazkii.quark.base.network.message.MessageDismountSeat;
+
+import javax.annotation.Nonnull;
+import java.util.List;
+import java.util.Objects;
 
 public class SitInStairs extends Feature {
 
@@ -42,14 +48,25 @@ public class SitInStairs extends Feature {
 		String name = LibMisc.PREFIX_MOD + "seat";
 		EntityRegistry.registerModEntity(new ResourceLocation(name), Seat.class, name, LibEntityIDs.SEAT, Quark.instance, 16, 128, false);
 	}
+
+	@SideOnly(Side.CLIENT)
+	@Override
+	public void preInitClient() {
+		RenderingRegistry.registerEntityRenderingHandler(Seat.class, RenderBlank::new);
+	}
 	
 	@SubscribeEvent
 	public void onInteract(PlayerInteractEvent.RightClickBlock event) {
+
 		EntityPlayer player = event.getEntityPlayer();
-		if(player.getRidingEntity() != null)
+		if(player.isSneaking() || player.getRidingEntity() != null)
 			return;
 		
 		World world = event.getWorld();
+		if (world.isRemote)
+			return;
+
+
 		BlockPos pos = event.getPos();
 		
 		Vec3d vec = new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
@@ -64,13 +81,14 @@ public class SitInStairs extends Feature {
 		if(!stack1.isEmpty() || !stack2.isEmpty())
 			return;
 
-		if(state.getBlock() instanceof BlockStairs && state.getValue(BlockStairs.HALF) == EnumHalf.BOTTOM && !state.getBlock().isSideSolid(state, world, pos, event.getFace()) && canBeAbove(world, pos)) {
+		if(state.getBlock() instanceof BlockStairs && state.getValue(BlockStairs.HALF) == EnumHalf.BOTTOM && !state.isSideSolid(world, pos, Objects.requireNonNull(event.getFace())) && canBeAbove(world, pos)) {
 			List<Seat> seats = world.getEntitiesWithinAABB(Seat.class, new AxisAlignedBB(pos, pos.add(1, 1, 1)));
 
 			if(seats.isEmpty()) {
 				Seat seat = new Seat(world, pos);
 				world.spawnEntity(seat);
-				event.getEntityPlayer().startRiding(seat);
+				if (event.getEntityPlayer().startRiding(seat))
+					event.getEntityPlayer().setPositionAndUpdate(seat.posX, seat.posY, seat.posZ);
 			}
 		}
 	}
@@ -83,8 +101,7 @@ public class SitInStairs extends Feature {
 	public static boolean canBeAbove(World world, BlockPos pos) {
 		BlockPos upPos = pos.up();
 		IBlockState state = world.getBlockState(upPos);
-		Block block = state.getBlock();
-		return block.getCollisionBoundingBox(state, world, upPos) == null;
+		return state.getCollisionBoundingBox(world, upPos) == null;
 	}
 
 	public static class Seat extends Entity {
@@ -92,13 +109,30 @@ public class SitInStairs extends Feature {
 		public Seat(World world, BlockPos pos) {
 			this(world);
 
-			setPosition(pos.getX() + 0.5, pos.getY() + 0.25, pos.getZ() + 0.5);
+			setPosition(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
 		}
 
 		public Seat(World par1World) {
 			super(par1World);
 
-			setSize(0F, 0F);
+			setSize(0.25F, 0.25F);
+		}
+
+		@Override
+		public double getMountedYOffset() {
+			return -0.25;
+		}
+
+		@Nonnull
+		@Override
+		public BlockPos getPosition() {
+			return new BlockPos(posX, posY, posZ);
+		}
+
+		@Override
+		public boolean canBeAttackedWithItem()
+		{
+			return false;
 		}
 
 		@Override
@@ -106,22 +140,30 @@ public class SitInStairs extends Feature {
 			super.onUpdate();
 
 			BlockPos pos = getPosition();
-			if(pos != null && !(getEntityWorld().getBlockState(pos).getBlock() instanceof BlockStairs) || !canBeAbove(getEntityWorld(), pos)) {
+			if(!(getEntityWorld().getBlockState(pos).getBlock() instanceof BlockStairs) || !canBeAbove(getEntityWorld(), pos)) {
 				setDead();
 				return;
 			}
 
-			List<Entity> passangers = getPassengers();
-			if(passangers.isEmpty())
+			List<Entity> passengers = getPassengers();
+			if(passengers.isEmpty())
 				setDead();
-			for(Entity e : passangers)
-				if(e.isSneaking())
+			for(Entity e : passengers)
+				if (e.isSneaking() || e.getDistanceSq(this) >= 1.0) {
 					setDead();
+				}
+		}
+
+		@Override
+		public void setDead() {
+			super.setDead();
+			if (world.isRemote)
+				NetworkHandler.INSTANCE.sendToServer(new MessageDismountSeat());
 		}
 
 		@Override protected void entityInit() { }
-		@Override protected void readEntityFromNBT(NBTTagCompound nbttagcompound) { }
-		@Override protected void writeEntityToNBT(NBTTagCompound nbttagcompound) { }
+		@Override protected void readEntityFromNBT(@Nonnull NBTTagCompound nbttagcompound) { }
+		@Override protected void writeEntityToNBT(@Nonnull NBTTagCompound nbttagcompound) { }
 	}
 
 }

@@ -1,12 +1,7 @@
 package vazkii.quark.oddities.tile;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.UUID;
-import java.util.function.Predicate;
-
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentData;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -14,15 +9,24 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.Container;
+import net.minecraft.item.EnumDyeColor;
 import net.minecraft.item.ItemEnchantedBook;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import net.minecraftforge.common.ForgeHooks;
 import vazkii.arl.util.ItemNBTHelper;
+import vazkii.quark.decoration.feature.TallowAndCandles;
 import vazkii.quark.oddities.feature.MatrixEnchanting;
 import vazkii.quark.oddities.inventory.ContainerMatrixEnchanting;
 import vazkii.quark.oddities.inventory.EnchantmentMatrix;
 import vazkii.quark.oddities.inventory.EnchantmentMatrix.Piece;
+
+import javax.annotation.Nonnull;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Predicate;
 
 public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 
@@ -43,6 +47,7 @@ public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 	private boolean matrixDirty = false;
 	private UUID matrixId;
 
+	public final Map<Enchantment, Integer> influences = new HashMap<>();
 	public int bookshelfPower, enchantability, charge;
 
 	@Override
@@ -106,16 +111,16 @@ public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 	}
 
 	private boolean generateAndPay(EnchantmentMatrix matrix, EntityPlayer player) {
-		if(matrix.canGeneratePiece(bookshelfPower, enchantability) && matrix.validateXp(player, bookshelfPower, enchantability)) {
+		if(matrix.canGeneratePiece(bookshelfPower, enchantability) && matrix.validateXp(player, bookshelfPower)) {
 			boolean creative = player.isCreative();
 			int cost = matrix.getNewPiecePrice();
 			if(charge > 0 || creative) {
-				if(!creative)
-					player.addExperienceLevel(-cost);
-				
-				charge = Math.max(charge - 1, 0);
-				
-				matrix.generatePiece(bookshelfPower, enchantability);
+				if (matrix.generatePiece(influences, bookshelfPower)) {
+					if (!creative)
+						player.addExperienceLevel(-cost);
+
+					charge = Math.max(charge - 1, 0);
+				}
 			}
 		}
 
@@ -136,16 +141,18 @@ public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 				book = true;
 			}
 
-			Map<Enchantment, Integer> enchantments = new HashMap();
+			Map<Enchantment, Integer> enchantments = new HashMap<>();
 
 			for(int i : matrix.placedPieces) {
 				Piece p = matrix.pieces.get(i);
 
-				for(Enchantment o : enchantments.keySet())
-					if(o == p.enchant || !p.enchant.isCompatibleWith(o) || !o.isCompatibleWith(p.enchant))
-						return; // Incompatible
+				if (p != null && p.enchant != null) {
+					for (Enchantment o : enchantments.keySet())
+						if (o == p.enchant || !p.enchant.isCompatibleWith(o) || !o.isCompatibleWith(p.enchant))
+							return; // Incompatible
 
-				enchantments.put(p.enchant, p.level);
+					enchantments.put(p.enchant, p.level);
+				}
 			}
 
 			if(book) 
@@ -153,7 +160,7 @@ public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 					ItemEnchantedBook.addEnchantment(out, new EnchantmentData(e.getKey(), e.getValue()));
 			else {
 				EnchantmentHelper.setEnchantments(enchantments, out);
-				out.getTagCompound().removeTag(TAG_STACK_MATRIX);
+				ItemNBTHelper.getNBT(out).removeTag(TAG_STACK_MATRIX);
 			}
 
 			setInventorySlotContents(2, out);
@@ -171,7 +178,7 @@ public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 				matrixDirty = true;
 				makeUUID();
 
-				if(stack.hasTagCompound() && stack.getTagCompound().hasKey(TAG_STACK_MATRIX)) {
+				if(ItemNBTHelper.verifyExistence(stack, TAG_STACK_MATRIX)) {
 					NBTTagCompound cmp = ItemNBTHelper.getCompound(stack, TAG_STACK_MATRIX, true);
 					if(cmp != null)
 						matrix.readFromNBT(cmp);
@@ -200,27 +207,48 @@ public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 
 	private void updateEnchantPower() {
 		ItemStack item = getStackInSlot(0);
+		influences.clear();
 		if(item.isEmpty())
 			return;
 
 		enchantability = item.getItem().getItemEnchantability(item);
 
 		float power = 0;
-		for (int j = -1; j <= 1; ++j)
-			for (int k = -1; k <= 1; ++k)
-				if ((j != 0 || k != 0) && world.isAirBlock(pos.add(k, 0, j)) && world.isAirBlock(pos.add(k, 1, j)))
-				{
-					power += ForgeHooks.getEnchantPower(world, pos.add(k * 2, 0, j * 2));
-					power += ForgeHooks.getEnchantPower(world, pos.add(k * 2, 1, j * 2));
+		for (int j = -1; j <= 1; ++j) {
+			for (int k = -1; k <= 1; ++k) {
+				if ((j != 0 || k != 0) && world.isAirBlock(pos.add(k, 0, j)) && world.isAirBlock(pos.add(k, 1, j))) {
+					power += getEnchantPowerAt(world, pos.add(k * 2, 0, j * 2));
+					power += getEnchantPowerAt(world, pos.add(k * 2, 1, j * 2));
 					if (k != 0 && j != 0) {
-						power += ForgeHooks.getEnchantPower(world, pos.add(k * 2, 0, j));
-						power += ForgeHooks.getEnchantPower(world, pos.add(k * 2, 1, j));
-						power += ForgeHooks.getEnchantPower(world, pos.add(k, 0, j * 2));
-						power += ForgeHooks.getEnchantPower(world, pos.add(k, 1, j * 2));
+						power += getEnchantPowerAt(world, pos.add(k * 2, 0, j));
+						power += getEnchantPowerAt(world, pos.add(k * 2, 1, j));
+						power += getEnchantPowerAt(world, pos.add(k, 0, j * 2));
+						power += getEnchantPowerAt(world, pos.add(k, 1, j * 2));
 					}
 				}
+			}
+		}
 
-		bookshelfPower = (int) power;
+		bookshelfPower = Math.min((int) power, MatrixEnchanting.maxBookshelves);
+	}
+	
+	private float getEnchantPowerAt(World world, BlockPos pos) {
+		if(MatrixEnchanting.allowInfluencing) {
+			IBlockState state = world.getBlockState(pos);
+			Block block = state.getBlock();
+			if(block == TallowAndCandles.candle) {
+				EnumDyeColor ord = state.getValue(TallowAndCandles.candle.variantProp).color;
+				
+				List<Enchantment> influencedEnchants = MatrixEnchanting.candleInfluences.get(ord);
+				for(Enchantment e : influencedEnchants) {
+					int curr = influences.getOrDefault(e, 0);
+					if(curr < MatrixEnchanting.influenceMax)
+						influences.put(e, curr + 1);
+				}
+			}
+		}
+		
+		return ForgeHooks.getEnchantPower(world, pos);
 	}
 
 	@Override
@@ -249,7 +277,7 @@ public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 			long most = cmp.getLong(TAG_MATRIX_UUID_MOST);
 			UUID newId = new UUID(most, least);
 
-			if(matrixId == null || !newId.equals(matrixId)) {
+			if(!newId.equals(matrixId)) {
 				NBTTagCompound matrixCmp = cmp.getCompoundTag(TAG_MATRIX);
 				matrixId = newId;
 				matrix = new EnchantmentMatrix(getStackInSlot(0), new Random());
@@ -260,8 +288,9 @@ public class TileMatrixEnchanter extends TileMatrixEnchanterBase {
 		charge = cmp.getInteger(TAG_CHARGE);
 	}
 
+	@Nonnull
 	@Override
-	public Container createContainer(InventoryPlayer playerInventory, EntityPlayer playerIn) {
+	public Container createContainer(@Nonnull InventoryPlayer playerInventory, @Nonnull EntityPlayer playerIn) {
 		return new ContainerMatrixEnchanting(playerInventory, this);
 	}
 

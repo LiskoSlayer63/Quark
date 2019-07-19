@@ -10,13 +10,9 @@
  */
 package vazkii.quark.vanity.feature;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-
 import com.google.common.collect.ImmutableSet;
-
+import com.google.common.collect.Lists;
+import gnu.trove.map.hash.TIntObjectHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiChat;
@@ -27,18 +23,18 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.resources.IResourcePack;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.client.event.RenderLivingEvent;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
-import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
 import net.minecraftforge.fml.common.gameevent.TickEvent.RenderTickEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import scala.actors.threadpool.Arrays;
 import vazkii.arl.network.NetworkHandler;
 import vazkii.aurelienribon.tweenengine.Tween;
 import vazkii.quark.base.client.ContributorRewardHandler;
@@ -47,12 +43,13 @@ import vazkii.quark.base.client.gui.GuiButtonTranslucent;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.base.module.ModuleLoader;
 import vazkii.quark.base.network.message.MessageRequestEmote;
-import vazkii.quark.vanity.client.emotes.CustomEmoteIconResourcePack;
-import vazkii.quark.vanity.client.emotes.EmoteBase;
-import vazkii.quark.vanity.client.emotes.EmoteDescriptor;
-import vazkii.quark.vanity.client.emotes.EmoteHandler;
-import vazkii.quark.vanity.client.emotes.ModelAccessor;
+import vazkii.quark.vanity.client.emotes.*;
 import vazkii.quark.vanity.client.gui.GuiButtonEmote;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 public class EmoteSystem extends Feature {
 
@@ -67,7 +64,7 @@ public class EmoteSystem extends Feature {
 			"point", 
 			"shrug",
 			"headbang",
-			"weep", 
+			"weep",
 			"facepalm"
 	};
 
@@ -78,15 +75,19 @@ public class EmoteSystem extends Feature {
 			"jet",
 			"exorcist",
 			"zombie"
-	); 
+	);
 
-	private static List<String> EMOTE_NAME_LIST = new ArrayList(Arrays.asList(EMOTE_NAMES));
+	public static final int EMOTE_BUTTON_WIDTH = 25;
+	public static final int EMOTES_PER_ROW = 3;
+
+	private static final List<String> EMOTE_NAME_LIST = Lists.newArrayList(EMOTE_NAMES);
 
 	private static final int EMOTE_BUTTON_START = 1800;
-	static boolean emotesVisible = false;
+	public static boolean emotesVisible = false;
 
 	public static boolean customEmoteDebug, emoteCommands;
 	public static File emotesDir;
+
 	@SideOnly(Side.CLIENT)
 	public static CustomEmoteIconResourcePack resourcePack;
 
@@ -107,17 +108,19 @@ public class EmoteSystem extends Feature {
 
 		emotesDir = new File(ModuleLoader.configFile.getParent(), "quark_emotes");
 		if(!emotesDir.exists())
-			emotesDir.mkdir();
+			if (!emotesDir.mkdir())
+				customEmotes = new String[0];
 	}
 
+	@SideOnly(Side.CLIENT)
 	public static void addResourcePack(List<IResourcePack> packs) {
 		packs.add(resourcePack = new CustomEmoteIconResourcePack());
 	}
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
-		Tween.registerAccessor(ModelBiped.class, new ModelAccessor());
+	public void preInitClient() {
+		Tween.registerAccessor(ModelBiped.class, ModelAccessor.INSTANCE);
 
 		for(String s : enabledEmotes)
 			if(EMOTE_NAME_LIST.contains(s))
@@ -139,25 +142,66 @@ public class EmoteSystem extends Feature {
 		GuiScreen gui = event.getGui();
 		if(gui instanceof GuiChat) {
 			List<GuiButton> list = event.getButtonList();
-			list.add(new GuiButtonTranslucent(EMOTE_BUTTON_START, gui.width - 76, gui.height - 40, 75, 20, I18n.format("quark.gui.emotes")));
+			list.add(new GuiButtonTranslucent(EMOTE_BUTTON_START, gui.width - 1 - EMOTE_BUTTON_WIDTH * EMOTES_PER_ROW, gui.height - 40, EMOTE_BUTTON_WIDTH * EMOTES_PER_ROW, 20, I18n.format("quark.gui.emotes")));
+
+			TIntObjectHashMap<List<EmoteDescriptor>> descriptorSorting = new TIntObjectHashMap<>();
+
+			for (EmoteDescriptor desc : EmoteHandler.emoteMap.values()) {
+				if (desc.getTier() <= ContributorRewardHandler.localPatronTier) {
+					List<EmoteDescriptor> descriptors = descriptorSorting.get(desc.getTier());
+					if (descriptors == null)
+						descriptorSorting.put(desc.getTier(), descriptors = Lists.newArrayList());
+
+					descriptors.add(desc);
+				}
+			}
+
+			int rows = 0;
 
 			int i = 0;
-			int size = EmoteHandler.emoteMap.size() - 1;
-			for(String key : EmoteHandler.emoteMap.keySet()) {
-				EmoteDescriptor desc = EmoteHandler.emoteMap.get(key);
-				int tier = desc.getTier();
+			int row = 0;
+			int tierRow, rowPos;
 
-				if(tier > ContributorRewardHandler.localPatronTier)
-					continue;
+			int[] keys = descriptorSorting.keys();
+			Arrays.sort(keys);
 
-				int x = gui.width - ((i % 3) + 1) * 25 - 1;
-				int y = gui.height - 65 - 25 * ((size / 3) - i / 3);
 
-				GuiButton button = new GuiButtonEmote(EMOTE_BUTTON_START + i + 1, x, y, desc);
-				button.visible = emotesVisible;
-				button.enabled = emotesVisible;
-				list.add(button);
-				i++;
+			for (int tier : keys) {
+				List<EmoteDescriptor> descriptors = descriptorSorting.get(tier);
+				if (descriptors != null) {
+					rows += descriptors.size() / 3;
+					if (descriptors.size() % 3 != 0)
+						rows++;
+				}
+			}
+
+			for (int tier : keys) {
+				rowPos = 0;
+				tierRow = 0;
+				List<EmoteDescriptor> descriptors = descriptorSorting.get(tier);
+				if (descriptors != null) {
+					for (EmoteDescriptor desc : descriptors) {
+						int rowSize = Math.min(descriptors.size() - tierRow * EMOTES_PER_ROW, EMOTES_PER_ROW);
+
+						int x = gui.width - (((rowPos + 1) * 2 + EMOTES_PER_ROW - rowSize) * EMOTE_BUTTON_WIDTH / 2 + 1);
+						int y = gui.height - (40 + EMOTE_BUTTON_WIDTH * (rows - row));
+
+						GuiButton button = new GuiButtonEmote(EMOTE_BUTTON_START + i + 1, x, y, desc);
+						button.visible = emotesVisible;
+						button.enabled = emotesVisible;
+						list.add(button);
+
+						i++;
+
+						if (++rowPos == EMOTES_PER_ROW) {
+							tierRow++;
+							row++;
+							rowPos = 0;
+						}
+					}
+				}
+				if (rowPos != 0)
+					row++;
 			}
 		}
 	}
@@ -227,8 +271,8 @@ public class EmoteSystem extends Feature {
 				GuiScreen.drawModalRectWithCustomSizedTexture(x, y, 0, 0, 32, 32, 32, 32);
 				GlStateManager.enableBlend();
 
-				String name = I18n.format(emote.desc.getUnlocalizedName());
-				mc.fontRenderer.drawStringWithShadow(name, res.getScaledWidth() / 2 - mc.fontRenderer.getStringWidth(name) / 2, y + 34, 0xFFFFFF + (((int) (transparency * 255F)) << 24));
+				String name = I18n.format(emote.desc.getTranslationKey());
+				mc.fontRenderer.drawStringWithShadow(name, res.getScaledWidth() / 2f - mc.fontRenderer.getStringWidth(name) / 2f, y + 34, 0xFFFFFF + (((int) (transparency * 255F)) << 24));
 				GlStateManager.popMatrix();
 			}
 		}
@@ -237,7 +281,21 @@ public class EmoteSystem extends Feature {
 	@SubscribeEvent
 	@SideOnly(Side.CLIENT)
 	public void renderTick(RenderTickEvent event) {
-		EmoteHandler.onRenderTick(Minecraft.getMinecraft(), event.phase == Phase.START);
+		EmoteHandler.onRenderTick(Minecraft.getMinecraft());
+	}
+
+	@SubscribeEvent(priority = EventPriority.HIGHEST)
+	@SideOnly(Side.CLIENT)
+	public void preRenderLiving(RenderLivingEvent.Pre event) {
+		if (event.getEntity() instanceof EntityPlayer)
+			EmoteHandler.preRender((EntityPlayer) event.getEntity());
+	}
+
+	@SubscribeEvent(priority = EventPriority.LOWEST)
+	@SideOnly(Side.CLIENT)
+	public void postRenderLiving(RenderLivingEvent.Post event) {
+		if (event.getEntity() instanceof EntityPlayer)
+			EmoteHandler.postRender((EntityPlayer) event.getEntity());
 	}
 
 	@Override

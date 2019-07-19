@@ -10,10 +10,7 @@
  */
 package vazkii.quark.world.feature;
 
-import java.util.Set;
-
 import com.google.common.collect.ImmutableSet;
-
 import net.minecraft.client.audio.GuardianSound;
 import net.minecraft.client.audio.ISound;
 import net.minecraft.entity.EnumCreatureType;
@@ -22,20 +19,21 @@ import net.minecraft.init.Biomes;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.Biome.SpawnListEntry;
 import net.minecraftforge.client.event.sound.PlaySoundEvent;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.relauncher.ReflectionHelper;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.quark.base.lib.LibObfuscation;
 import vazkii.quark.base.module.Feature;
 import vazkii.quark.world.client.sound.GuardianSound2UnderwaterBoogaloo;
 
+import java.util.Set;
+
 public class OceanGuardians extends Feature {
 
-	boolean deepOceanOnly;
-	int weight, min, max;
-	boolean tweakSound;
+	public static boolean deepOceanOnly;
+	public static int weight, min, max;
+	public static boolean tweakSound;
 
 	@Override
 	public void setupConfig() {
@@ -47,7 +45,7 @@ public class OceanGuardians extends Feature {
 	}
 
 	@Override
-	public void init(FMLInitializationEvent event) {
+	public void init() {
 		Set<Biome> set = deepOceanOnly ? ImmutableSet.of(Biomes.DEEP_OCEAN) : ImmutableSet.of(Biomes.OCEAN, Biomes.DEEP_OCEAN);
 
 		for(Biome b : set)
@@ -62,8 +60,8 @@ public class OceanGuardians extends Feature {
 
 		ISound sound = event.getSound();
 		if(sound instanceof GuardianSound) {
-			GuardianSound gsound = (GuardianSound) sound;
-			EntityGuardian guardian = ReflectionHelper.getPrivateValue(GuardianSound.class, gsound, LibObfuscation.GUARDIAN);
+			GuardianSound guardianSound = (GuardianSound) sound;
+			EntityGuardian guardian = ObfuscationReflectionHelper.getPrivateValue(GuardianSound.class, guardianSound, LibObfuscation.GUARDIAN);
 			event.setResultSound(new GuardianSound2UnderwaterBoogaloo(guardian));
 		}
 	}

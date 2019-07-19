@@ -1,7 +1,6 @@
 package vazkii.quark.decoration.feature;
 
 import net.minecraft.block.Block;
-import net.minecraft.init.Items;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import vazkii.arl.recipe.RecipeHandler;
 import vazkii.arl.util.ProxyRegistry;
@@ -21,6 +20,9 @@ public class PaperLantern extends Feature {
 				'P', "paper",
 				'S', "stickWood",
 				'G', "glowstone");
+		
+		RecipeHandler.addShapelessOreDictRecipe(ProxyRegistry.newStack(paper_lantern, 1, 1), 
+				ProxyRegistry.newStack(paper_lantern), "treeSapling");
 	}
 	
 	@Override

@@ -10,14 +10,6 @@
  */
 package vazkii.quark.base.handler;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Supplier;
-
-import net.minecraftforge.items.SlotItemHandler;
-import org.apache.commons.lang3.tuple.Pair;
-
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.player.InventoryPlayer;
@@ -26,13 +18,14 @@ import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.items.CapabilityItemHandler;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemHandlerHelper;
+import net.minecraftforge.items.SlotItemHandler;
 import net.minecraftforge.items.wrapper.InvWrapper;
+import org.apache.commons.lang3.tuple.Pair;
 import vazkii.arl.network.NetworkHandler;
 import vazkii.quark.api.IDropoffManager;
 import vazkii.quark.base.module.ModuleLoader;
@@ -40,6 +33,12 @@ import vazkii.quark.base.network.message.MessageDisableDropoffClient;
 import vazkii.quark.management.feature.ChestButtons;
 import vazkii.quark.management.feature.FavoriteItems;
 import vazkii.quark.management.feature.StoreToChests;
+
+import javax.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.Supplier;
 
 public final class DropoffHandler {
 
@@ -83,51 +82,59 @@ public final class DropoffHandler {
 				return innerRet;
 			};
 			
-			if(te instanceof IDropoffManager)
-				return ((IDropoffManager) te).getDropoffItemHandler(supplier);
+			if(IDropoffManager.hasProvider(te))
+				return IDropoffManager.getProvider(te).getDropoffItemHandler(supplier);
 			else return supplier.get();
 		}
 		
 		return null;
 	}
 
+	private static boolean hasProvider(Object te) {
+		return te instanceof TileEntity && IDropoffManager.hasProvider((TileEntity) te);
+	}
+
+	private static IDropoffManager getProvider(Object te) {
+		return IDropoffManager.getProvider((TileEntity) te);
+	}
+
+
+	private static boolean accepts(Object te, EntityPlayer player) {
+		if (hasProvider(te))
+			return getProvider(te).acceptsDropoff(player);
+
+		return false;
+	}
 
 	public static boolean isValidChest(EntityPlayer player, TileEntity te) {
-		boolean accept = te instanceof IDropoffManager && ((IDropoffManager) te).acceptsDropoff(player);
-		if(!accept) {
-			String name = te.getClass().getSimpleName().toLowerCase();
-			accept = (name.contains("chest") || te instanceof TileEntityChest) && !name.contains("void") && !name.contains("trash");
-		}
+		boolean accept = accepts(te, player);
+		if(!accept) accept = ChestButtons.overriddenDropoff(te);
 
 		if(te instanceof IInventory)
 			accept = accept && ((IInventory) te).isUsableByPlayer(player);
+
 
 		return accept;
 	}
 
 	public static boolean isValidChest(EntityPlayer player, IInventory te) {
-		boolean accept = te instanceof IDropoffManager && ((IDropoffManager) te).acceptsDropoff(player);
-		if(!accept) {
-			String name = te.getClass().getSimpleName().toLowerCase();
-			accept = (name.contains("chest") || te instanceof TileEntityChest) && !name.contains("void") && !name.contains("trash");
-		}
+		if (te instanceof TileEntity)
+			return isValidChest(player, (TileEntity) te);
 
-		accept = accept && te.isUsableByPlayer(player);
-
-		return accept;
+		return accepts(te, player) && te.isUsableByPlayer(player);
 	}
 
 	public static boolean isValidChest(EntityPlayer player, IItemHandler te) {
-		return te instanceof IDropoffManager && ((IDropoffManager) te).acceptsDropoff(player);
+		return accepts(te, player);
 	}
 
 	public static class Dropoff {
 
-		final EntityPlayer player;
-		final boolean smart;
-		final boolean useContainer;
+		public final EntityPlayer player;
+		public final boolean smart;
+		public final boolean useContainer;
 
-		List<Pair<IItemHandler, Double>> itemHandlers = new ArrayList();
+		public final List<Pair<IItemHandler, Double>> itemHandlers = new ArrayList<>();
 
 		public Dropoff(EntityPlayer player, boolean smart, boolean useContainer) {
 			this.player = player;
@@ -198,7 +205,7 @@ public final class DropoffHandler {
 							findHandler(pos);
 						}
 
-				Collections.sort(itemHandlers, (pair1, pair2) -> Double.compare(pair1.getRight(), pair2.getRight()));
+				itemHandlers.sort(Comparator.comparingDouble(Pair::getRight));
 			}
 		}
 
@@ -208,25 +215,25 @@ public final class DropoffHandler {
 				itemHandlers.add(Pair.of(handler, player.getDistanceSq(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)));
 		}
 
-		public void dropoff(DropoffPredicate pred) {
+		public void dropoff(DropoffPredicate predicate) {
 			InventoryPlayer inv = player.inventory;
 
 			for(int i = InventoryPlayer.getHotbarSize(); i < inv.mainInventory.size(); i++) {
 				ItemStack stackAt = inv.getStackInSlot(i);
 
 				if(!stackAt.isEmpty() && !FavoriteItems.isItemFavorited(stackAt)) {
-					ItemStack ret = insert(stackAt, pred);
+					ItemStack ret = insert(stackAt, predicate);
 					if(!ItemStack.areItemStacksEqual(stackAt, ret))
 						inv.setInventorySlotContents(i, ret);
 				}
 			}
 		}
 
-		public ItemStack insert(ItemStack stack, DropoffPredicate pred) {
+		public ItemStack insert(ItemStack stack, DropoffPredicate predicate) {
 			ItemStack ret = stack.copy();
 			for(Pair<IItemHandler, Double> pair : itemHandlers) {
 				IItemHandler handler = pair.getLeft();
-				ret = insertInHandler(handler, ret, pred);
+				ret = insertInHandler(handler, ret, predicate);
 				if(ret.isEmpty())
 					return ItemStack.EMPTY;
 			}
@@ -234,8 +241,8 @@ public final class DropoffHandler {
 			return ret;
 		}
 
-		public ItemStack insertInHandler(IItemHandler handler, final ItemStack stack, DropoffPredicate pred) {
-			if(pred.apply(stack, handler)) {
+		public ItemStack insertInHandler(IItemHandler handler, final ItemStack stack, DropoffPredicate predicate) {
+			if(predicate.apply(stack, handler)) {
 				ItemStack retStack = ItemHandlerHelper.insertItemStacked(handler, stack, false);
 				if(!retStack.isEmpty())
 					retStack = retStack.copy();
@@ -257,7 +264,7 @@ public final class DropoffHandler {
 		}
 
 		@Override
-		public void dropoff(DropoffPredicate pred) {
+		public void dropoff(DropoffPredicate predicate) {
 			IItemHandler inv = itemHandlers.get(0).getLeft();
 			IItemHandler playerInv = new PlayerInvWrapper(player.inventory);
 
@@ -266,7 +273,7 @@ public final class DropoffHandler {
 
 				if(!stackAt.isEmpty()) {
 					ItemStack copy = stackAt.copy();
-					ItemStack ret = insertInHandler(playerInv, copy, pred);
+					ItemStack ret = insertInHandler(playerInv, copy, predicate);
 					
 					if(!ItemStack.areItemStacksEqual(stackAt, ret)) {
 						inv.extractItem(i, stackAt.getMaxStackSize(), false);
@@ -284,8 +291,9 @@ public final class DropoffHandler {
 			super(inv);
 		}
 
+		@Nonnull
 		@Override
-		public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+		public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
 			if(stack.isEmpty())
 				stack = stack.copy();
 
@@ -301,13 +309,13 @@ public final class DropoffHandler {
 	
 	public static class ContainerWrapper extends InvWrapper {
 		
-		final Container container;
+		private final Container container;
 
 		public static IItemHandler provideWrapper(Slot slot, Container container) {
 			if (slot instanceof SlotItemHandler) {
 				IItemHandler handler = ((SlotItemHandler) slot).getItemHandler();
-				if (handler instanceof IDropoffManager) {
-					return ((IDropoffManager) handler).getDropoffItemHandler(() -> handler);
+				if (hasProvider(handler)) {
+					return getProvider(handler).getDropoffItemHandler(() -> handler);
 				} else {
 					return handler;
 				}
@@ -317,8 +325,8 @@ public final class DropoffHandler {
 		}
 
 		public static IItemHandler provideWrapper(IInventory inv, Container container) {
-			if(inv instanceof IDropoffManager)
-				return ((IDropoffManager) inv).getDropoffItemHandler(() -> new ContainerWrapper(inv, container));
+			if(hasProvider(inv))
+				return getProvider(inv).getDropoffItemHandler(() -> new ContainerWrapper(inv, container));
 			return new ContainerWrapper(inv, container);
 		}
 		
@@ -327,8 +335,9 @@ public final class DropoffHandler {
 			this.container = container;
 		}
 		
+		@Nonnull
 		@Override
-		public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+		public ItemStack insertItem(int slot, @Nonnull ItemStack stack, boolean simulate) {
 			Slot containerSlot = getSlot(slot);
 			if(containerSlot == null || !containerSlot.isItemValid(stack))
 				return stack;
@@ -342,9 +351,9 @@ public final class DropoffHandler {
 		
 	}
 
-	public static interface DropoffPredicate {
+	public interface DropoffPredicate {
 
-		public boolean apply(ItemStack stack, IItemHandler handler);
+		boolean apply(ItemStack stack, IItemHandler handler);
 
 	}
 

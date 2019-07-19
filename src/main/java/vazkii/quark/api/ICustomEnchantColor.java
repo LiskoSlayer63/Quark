@@ -11,13 +11,16 @@
 package vazkii.quark.api;
 
 import net.minecraft.item.ItemStack;
+import vazkii.quark.api.capability.IEnchantColorProvider;
 
 /**
  * Implement on an Item to allow it to have a custom glint color.
+ *
+ * This should not be manually checked for. Instead, check if the item provides {@link IEnchantColorProvider}.
  */
 public interface ICustomEnchantColor {
 
-	public int getEnchantEffectColor(ItemStack stack);
+	int getEnchantEffectColor(ItemStack stack);
 
 	/**
 	 * Due to how enchantment color blending works, by default, the brightness of the effect
@@ -25,7 +28,7 @@ public interface ICustomEnchantColor {
 	 * components of the vanilla purple color. Setting this to false allows the color to go
 	 * as bright as possible, up to complete opaque if (255, 255, 255).
 	 */
-	public default boolean shouldTruncateColorBrightness(ItemStack stack) {
+	default boolean shouldTruncateColorBrightness(ItemStack stack) {
 		return true;
 	}
 

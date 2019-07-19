@@ -1,9 +1,6 @@
 package vazkii.quark.management.feature;
 
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.google.common.collect.Lists;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiContainerCreative;
@@ -13,7 +10,6 @@ import net.minecraft.inventory.Container;
 import net.minecraft.inventory.Slot;
 import net.minecraft.inventory.SlotCrafting;
 import net.minecraftforge.client.event.GuiScreenEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
@@ -25,13 +21,15 @@ import vazkii.quark.base.network.message.MessageSortInventory;
 import vazkii.quark.management.client.gui.GuiButtonChest;
 import vazkii.quark.management.client.gui.GuiButtonChest.Action;
 
+import java.util.List;
+
 public class InventorySorting extends Feature {
 
-	int xPos, yPos;
-	int xPosC, yPosC;
+	public static int xPos, yPos;
+	public static int xPosC, yPosC;
 	public static boolean enablePlayerButton;
-	
-	List<String> classnames;
+
+	public static List<String> classnames;
 
 	@Override
 	public void setupConfig() {
@@ -42,12 +40,12 @@ public class InventorySorting extends Feature {
 		enablePlayerButton = loadPropBool("Enable Button in Player Inventory", "", true);
 
 		String[] classnamesArr = loadPropStringList("Forced GUIs", "GUIs in which the sort button should be forced to show up. Use the \"Debug Classnames\" option in chest buttons to find the names.", new String[0]);
-		classnames = new ArrayList(Arrays.asList(classnamesArr));
+		classnames = Lists.newArrayList(classnamesArr);
 	}
 	
 	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		ModKeybinds.initPlayerSortingKey();
 	}
 	
@@ -68,13 +66,13 @@ public class InventorySorting extends Feature {
 			for(Slot s : container.inventorySlots)
 				if(creativeInv != null || s instanceof SlotCrafting) {
 					if(creativeInv == null)
-						ChestButtons.addButtonAndKeybind(event, Action.SORT, guiInv, 13212, s.xPos + xPos, s.yPos + yPos, s, ModKeybinds.playerSortKey);
+						ChestButtons.addButtonAndKeybind(event, Action.SORT, guiInv, 13212, s.xPos + xPos, s.yPos + yPos, ModKeybinds.playerSortKey);
 					else {
 						if(s.getSlotIndex() != 15)
 							continue;
 
-						ChestButtons.<GuiContainerCreative>addButtonAndKeybind(event, Action.SORT, guiInv, 132112, s.xPos + xPosC, s.yPos + yPosC, s, ModKeybinds.playerSortKey,
-								(gui) -> gui.getSelectedTabIndex() == CreativeTabs.INVENTORY.getTabIndex());
+						ChestButtons.addButtonAndKeybind(event, Action.SORT, guiInv, 132112, s.xPos + xPosC, s.yPos + yPosC, ModKeybinds.playerSortKey,
+								(gui) -> ((GuiContainerCreative) gui).getSelectedTabIndex() == CreativeTabs.INVENTORY.getIndex());
 					}
 
 					break;

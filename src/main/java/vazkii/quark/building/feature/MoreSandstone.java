@@ -29,7 +29,7 @@ public class MoreSandstone extends Feature {
 
 	public static BlockMod sandstone_new;
 
-	boolean enableStairsAndSlabs;
+	public static boolean enableStairsAndSlabs;
 
 	@Override
 	public void setupConfig() {
@@ -37,6 +37,7 @@ public class MoreSandstone extends Feature {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public void preInit(FMLPreInitializationEvent event) {
 		sandstone_new = new BlockNewSandstone();
 		
@@ -56,7 +57,7 @@ public class MoreSandstone extends Feature {
 		if(enableStairsAndSlabs) {
 			boolean soulSandstone = ModuleLoader.isFeatureEnabled(SoulSandstone.class);
 			
-			for(BlockNewSandstone.Variants variant : BlockNewSandstone.Variants.class.getEnumConstants()) {
+			for(BlockNewSandstone.Variants variant : BlockNewSandstone.Variants.values()) {
 				if(!variant.stairs)
 					continue;
 				if(variant.ordinal() > 3 && !soulSandstone)
@@ -67,7 +68,7 @@ public class MoreSandstone extends Feature {
 				BlockModStairs.initStairs(sandstone_new, variant.ordinal(), new BlockVanillaStairs(name, state));
 			}
 
-			for(BlockNewSandstone.Variants variant : BlockNewSandstone.Variants.class.getEnumConstants()) {
+			for(BlockNewSandstone.Variants variant : BlockNewSandstone.Variants.values()) {
 				if(!variant.slabs)
 					continue;
 				if(variant.ordinal() > 3 && !soulSandstone)
@@ -81,7 +82,7 @@ public class MoreSandstone extends Feature {
 	}
 	
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {		
+	public void postPreInit() {
 		if(ModuleLoader.isFeatureEnabled(SoulSandstone.class)) {
 			RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(sandstone_new, 8, 4),
 					"SSS", "S S", "SSS",

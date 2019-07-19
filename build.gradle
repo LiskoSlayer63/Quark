@@ -43,8 +43,8 @@ repositories {
 }
 
 dependencies {
-    compile "vazkii.autoreglib:AutoRegLib:${config.arl_version}"
-    deobfProvided "mezz.jei:jei_${config.mc_version}:${config.jei_version}:api"
+    deobfCompile "vazkii.autoreglib:AutoRegLib:${config.arl_version}"
+    deobfCompile "mezz.jei:jei_${config.mc_version}:${config.jei_version}"
 }
 
 minecraft {

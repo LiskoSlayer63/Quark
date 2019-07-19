@@ -10,10 +10,6 @@
  */
 package vazkii.quark.world.feature;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.entity.monster.EntitySkeleton;
@@ -32,20 +28,23 @@ import vazkii.quark.world.client.render.RenderDweller;
 import vazkii.quark.world.entity.EntityAshen;
 import vazkii.quark.world.entity.EntityDweller;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DepthMobs extends Feature {
 
 	public static int upperBound;
-	boolean enableAshen, enableDweller;
-	int ashenWeight, dwellerWeight;
-	int ashenMaxPack, dwellerMaxPack, ashenMinPack, dwellerMinPack;
+	public static boolean enableAshen, enableDweller;
+	public static int ashenWeight, dwellerWeight;
+	public static int ashenMaxPack, dwellerMaxPack, ashenMinPack, dwellerMinPack;
 
 	@Override
 	public void setupConfig() {
 		upperBound = loadPropInt("Highest Y level for spawns", "", 20);
 		enableAshen = loadPropBool("Enable Ashen", "", true);
 		enableDweller = loadPropBool("Enable Dweller", "", true);
-		ashenWeight = loadPropInt("Ashen Spawn Weight", "(Skeleton is 100. The higher, the more will spawn)", 10);
-		dwellerWeight = loadPropInt("Dweller Spawn Weight", "(Zombie is 100. The higher, the more will spawn)", 10);
+		ashenWeight = loadPropInt("Ashen Spawn Weight", "(Skeleton is 100. The higher, the more will spawn)", 30);
+		dwellerWeight = loadPropInt("Dweller Spawn Weight", "(Zombie is 100. The higher, the more will spawn)", 30);
 		ashenMaxPack = loadPropInt("Largest Ashen spawn group", "", 2);
 		dwellerMaxPack = loadPropInt("Largest Dweller spawn group", "", 2);
 		ashenMinPack = loadPropInt("Smallest Ashen spawn group", "", 1);
@@ -68,7 +67,7 @@ public class DepthMobs extends Feature {
 	}
 
 	@Override
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		if(enableDweller)
 			RenderingRegistry.registerEntityRenderingHandler(EntityDweller.class, RenderDweller.FACTORY);
 		if(enableAshen)
@@ -80,20 +79,18 @@ public class DepthMobs extends Feature {
 		return true;
 	}
 
-	private Biome[] getBiomesWithMob(Class<? extends Entity> clazz) {
-		List<Biome> biomes = new ArrayList();
-		Iterator<Biome> bIter = Biome.REGISTRY.iterator();
-		while(bIter.hasNext()) {
-			Biome b = bIter.next();
+	public static Biome[] getBiomesWithMob(Class<? extends Entity> clazz) {
+		List<Biome> biomes = new ArrayList<>();
+		for (Biome b : Biome.REGISTRY) {
 			List<SpawnListEntry> spawnList = b.getSpawnableList(EnumCreatureType.MONSTER);
-			for(SpawnListEntry e : spawnList)
-				if(e.entityClass == clazz) {
+			for (SpawnListEntry e : spawnList)
+				if (e.entityClass == clazz) {
 					biomes.add(b);
 					break;
 				}
 		}
 
-		return biomes.toArray(new Biome[biomes.size()]);
+		return biomes.toArray(new Biome[0]);
 	}
 
 }

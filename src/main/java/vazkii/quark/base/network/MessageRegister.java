@@ -10,31 +10,22 @@
  */
 package vazkii.quark.base.network;
 
+import io.netty.buffer.ByteBuf;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.fml.relauncher.Side;
 import vazkii.arl.network.NetworkHandler;
 import vazkii.arl.network.NetworkMessage;
-import vazkii.quark.base.network.message.MessageChangeConfig;
-import vazkii.quark.base.network.message.MessageChangeHotbar;
-import vazkii.quark.base.network.message.MessageDeleteItem;
-import vazkii.quark.base.network.message.MessageDisableDropoffClient;
-import vazkii.quark.base.network.message.MessageDoEmote;
-import vazkii.quark.base.network.message.MessageDropoff;
-import vazkii.quark.base.network.message.MessageFavoriteItem;
-import vazkii.quark.base.network.message.MessageHandleBackpack;
-import vazkii.quark.base.network.message.MessageLinkItem;
-import vazkii.quark.base.network.message.MessageMatrixEnchanterOperation;
-import vazkii.quark.base.network.message.MessageRequestEmote;
-import vazkii.quark.base.network.message.MessageRequestPassengerChest;
-import vazkii.quark.base.network.message.MessageRestock;
-import vazkii.quark.base.network.message.MessageSetLockProfile;
-import vazkii.quark.base.network.message.MessageSortInventory;
-import vazkii.quark.base.network.message.MessageSwapItems;
-import vazkii.quark.base.network.message.MessageTuneNoteBlock;
-import vazkii.quark.base.network.message.MessageUpdateAfk;
+import vazkii.quark.base.network.message.*;
 import vazkii.quark.misc.feature.LockDirectionHotkey.LockProfile;
+
+import java.io.IOException;
+import java.util.UUID;
 
 public class MessageRegister {
 
+	@SuppressWarnings("unchecked")
 	public static void init() {
 		NetworkHandler.register(MessageDoEmote.class, Side.CLIENT);
 		NetworkHandler.register(MessageDropoff.class, Side.SERVER);
@@ -54,8 +45,44 @@ public class MessageRegister {
 		NetworkHandler.register(MessageHandleBackpack.class, Side.SERVER);
 		NetworkHandler.register(MessageRequestEmote.class, Side.SERVER);
 		NetworkHandler.register(MessageMatrixEnchanterOperation.class, Side.SERVER);
+		NetworkHandler.register(MessageSyncBoatBanner.class, Side.CLIENT);
+		NetworkHandler.register(MessageItemUpdate.class, Side.CLIENT);
+		NetworkHandler.register(MessageSpamlessChat.class, Side.CLIENT);
+		NetworkHandler.register(MessageRotateArrows.class, Side.SERVER);
+		NetworkHandler.register(MessageDismountSeat.class, Side.SERVER);
+		NetworkHandler.register(MessageSyncColors.class, Side.CLIENT);
+		NetworkHandler.register(MessageSyncChain.class, Side.CLIENT);
 
 		NetworkMessage.mapHandler(LockProfile.class, LockProfile::readProfile, LockProfile::writeProfile);
+		NetworkMessage.mapHandler(ITextComponent.class, MessageRegister::readComponent, MessageRegister::writeComponent);
+		NetworkMessage.mapHandler(UUID.class, MessageRegister::readUUID, MessageRegister::writeUUID);
+	}
+
+	private static ITextComponent readComponent(ByteBuf buf) {
+		try {
+			return new PacketBuffer(buf).readTextComponent();
+		} catch (IOException e) {
+			return new TextComponentString("");
+		}
+	}
+
+	private static void writeComponent(ITextComponent comp, ByteBuf buf) {
+		new PacketBuffer(buf).writeTextComponent(comp);
+	}
+
+	private static UUID readUUID(ByteBuf buf) {
+		if (buf.readBoolean())
+			return null;
+		return new PacketBuffer(buf).readUniqueId();
+	}
+
+	private static void writeUUID(UUID uuid, ByteBuf buf) {
+		if (uuid == null)
+			buf.writeBoolean(true);
+		else {
+			buf.writeBoolean(false);
+			new PacketBuffer(buf).writeUniqueId(uuid);
+		}
 	}
 	
 }

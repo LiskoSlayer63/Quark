@@ -24,10 +24,10 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import vazkii.arl.item.ItemModBlock;
-import vazkii.arl.util.ProxyRegistry;
 import vazkii.quark.base.block.IQuarkBlock;
 import vazkii.quark.base.lib.LibMisc;
+
+import javax.annotation.Nonnull;
 
 public class BlockBiotite extends BlockQuartz implements IQuarkBlock {
 
@@ -42,15 +42,14 @@ public class BlockBiotite extends BlockQuartz implements IQuarkBlock {
 		variants = new String[] { name, "chiseled_biotite_block", "pillar_biotite_block" };
 		bareName = name;
 
-		setUnlocalizedName(name);
+		setTranslationKey(name);
 	}
 
+	@Nonnull
 	@Override
-	public Block setUnlocalizedName(String name) {
-		super.setUnlocalizedName(name);
-		setRegistryName(LibMisc.PREFIX_MOD + name);
-		ProxyRegistry.register(this);
-		ProxyRegistry.register(new ItemModBlock(this, new ResourceLocation(LibMisc.PREFIX_MOD + name)));
+	public Block setTranslationKey(@Nonnull String name) {
+		super.setTranslationKey(name);
+		register(name);
 		return this;
 	}
 
@@ -95,17 +94,18 @@ public class BlockBiotite extends BlockQuartz implements IQuarkBlock {
 	public IStateMapper getStateMapper() {
 		return new StateMapperBase() {
 
+			@Nonnull
 			@Override
-			public ModelResourceLocation getModelResourceLocation(IBlockState state) {
-				BlockQuartz.EnumType blockquartz$enumtype = state.getValue(BlockQuartz.VARIANT);
+			public ModelResourceLocation getModelResourceLocation(@Nonnull IBlockState state) {
+				BlockQuartz.EnumType type = state.getValue(BlockQuartz.VARIANT);
 				ResourceLocation baseLocation = new ResourceLocation(LibMisc.MOD_ID.toLowerCase(), "biotite_block");
 
-				switch (blockquartz$enumtype)  {
-				case CHISELED: return new ModelResourceLocation(baseLocation, "chiseled");
-				case LINES_Y: return new ModelResourceLocation(baseLocation, "axis=y");
-				case LINES_X: return new ModelResourceLocation(baseLocation, "axis=x");
-				case LINES_Z: return new ModelResourceLocation(baseLocation, "axis=z");
-				default: return new ModelResourceLocation(baseLocation, "normal");
+				switch (type)  {
+					case CHISELED: return new ModelResourceLocation(baseLocation, "chiseled");
+					case LINES_Y: return new ModelResourceLocation(baseLocation, "axis=y");
+					case LINES_X: return new ModelResourceLocation(baseLocation, "axis=x");
+					case LINES_Z: return new ModelResourceLocation(baseLocation, "axis=z");
+					default: return new ModelResourceLocation(baseLocation, "normal");
 				}
 			}
 		};

@@ -23,6 +23,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumFacing.Axis;
 import net.minecraft.util.math.BlockPos;
@@ -36,8 +37,7 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
-import net.minecraftforge.event.world.BlockEvent.PlaceEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent.KeyInputEvent;
@@ -55,25 +55,33 @@ public class LockDirectionHotkey extends Feature {
 
 	private static final String TAG_LOCKED_ONCE = "quark:locked_once";
 	
-	private static final HashMap<String, LockProfile> lockProfiles = new HashMap();
+	private static final HashMap<String, LockProfile> lockProfiles = new HashMap<>();
 	private LockProfile clientProfile;
 	
 	@Override
+	public void setupConfig() {
+		lockProfiles.clear();
+	}
+	
+	@Override
 	@SideOnly(Side.CLIENT)
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		ModKeybinds.initLockKey();
 	}
 	
 	@SubscribeEvent
-	public void onBlockPlaced(PlaceEvent event) {
+	@SuppressWarnings("deprecation")
+	public void onBlockPlaced(BlockEvent.PlaceEvent event) {
 		if(event.isCanceled() || event.getResult() == Result.DENY)
 			return;
 		
-		World world = event.getWorld();
-		IBlockState state = event.getPlacedBlock();
-		BlockPos pos = event.getPos();
+		fixBlockRotation(event.getWorld(), event.getPlayer(), event.getPos());
+	}
+	
+	public static void fixBlockRotation(World world, EntityPlayer player, BlockPos pos) {
+		IBlockState state = world.getBlockState(pos);
 		
-		String name = event.getPlayer().getName();
+		String name = player.getName();
 		if(lockProfiles.containsKey(name)) {
 			LockProfile profile = lockProfiles.get(name);
 			setBlockRotated(world, state, pos, profile.facing.getOpposite(), true, profile.half);
@@ -92,7 +100,22 @@ public class LockDirectionHotkey extends Feature {
 		// API hook
 		if(block instanceof IRotationLockHandler)
 			setState = ((IRotationLockHandler) block).setRotation(world, pos, setState, face, half != -1, half == 1);
-		
+
+		// Bed Special Case
+		else if (block == Blocks.BED && face.getAxis() != Axis.Y) {
+			EnumFacing prevFace = state.getValue(BlockHorizontal.FACING);
+			EnumFacing opposite = face.getOpposite();
+			if (prevFace != opposite) {
+				BlockPos prevPos = pos.offset(prevFace);
+				setState = state.withProperty(BlockHorizontal.FACING, opposite);
+				IBlockState inWorld = world.getBlockState(prevPos);
+				if (inWorld.getBlock() == Blocks.BED) {
+					world.setBlockToAir(prevPos);
+					world.setBlockState(pos.offset(opposite), inWorld.withProperty(BlockHorizontal.FACING, opposite));
+				}
+			}
+		}
+
 		// General Facing
 		else if(props.containsKey(BlockDirectional.FACING))
 			setState = state.withProperty(BlockDirectional.FACING, face);
@@ -225,8 +248,8 @@ public class LockDirectionHotkey extends Feature {
 	
 	public static class LockProfile {
 		
-		EnumFacing facing;
-		int half;
+		public final EnumFacing facing;
+		public final int half;
 		
 		public LockProfile(EnumFacing facing, int half) {
 			this.facing = facing;
@@ -240,7 +263,7 @@ public class LockDirectionHotkey extends Feature {
 			
 			int face = buf.readInt();
 			int half = buf.readInt();
-			return new LockProfile(EnumFacing.class.getEnumConstants()[face], half);
+			return new LockProfile(EnumFacing.byIndex(face), half);
 		}
 
 		public static void writeProfile(LockProfile p, ByteBuf buf) {
@@ -248,7 +271,7 @@ public class LockDirectionHotkey extends Feature {
 				buf.writeBoolean(false);
 			else {
 				buf.writeBoolean(true);
-				buf.writeInt(p.facing.ordinal());
+				buf.writeInt(p.facing.getIndex());
 				buf.writeInt(p.half);
 			}
 		}

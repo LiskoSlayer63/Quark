@@ -25,6 +25,8 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import vazkii.quark.misc.feature.ExtraArrows;
 
+import javax.annotation.Nonnull;
+
 public class EntityArrowTorch extends EntityArrow {
 
 	public EntityArrowTorch(World worldIn) {
@@ -39,6 +41,7 @@ public class EntityArrowTorch extends EntityArrow {
 		super(worldIn, pos.getX(), pos.getY(), pos.getZ());
 	}
 
+	@Nonnull
 	@Override
 	protected ItemStack getArrowStack() {
 		return new ItemStack(ExtraArrows.arrow_torch);
@@ -55,26 +58,25 @@ public class EntityArrowTorch extends EntityArrow {
 	public void spawnPotionParticles(int particleCount) {
 		if(particleCount > 0)
 			for(int i = 0; i < particleCount; i++)
-				getEntityWorld().spawnParticle(EnumParticleTypes.FLAME, posX + (rand.nextDouble() - 0.5D) * width, posY + rand.nextDouble() * height, posZ + (rand.nextDouble() - 0.5D) * width, 0.0D, 0.0D, 0.0D, new int[0]);
+				getEntityWorld().spawnParticle(EnumParticleTypes.FLAME, posX + (rand.nextDouble() - 0.5D) * width, posY + rand.nextDouble() * height, posZ + (rand.nextDouble() - 0.5D) * width, 0.0D, 0.0D, 0.0D);
 	}
 
 	@Override
-	protected void onHit(RayTraceResult raytraceResultIn) {
-		super.onHit(raytraceResultIn);
+	protected void onHit(RayTraceResult rayTrace) {
+		super.onHit(rayTrace);
 
 		if(isDead)
 			return;
 		
 		if(!getEntityWorld().isRemote) {
-			BlockPos pos = raytraceResultIn.getBlockPos();
-			if(pos == null)
+			if(rayTrace.typeOfHit != RayTraceResult.Type.BLOCK)
 				return;
-			
-			BlockPos finalPos = pos.offset(raytraceResultIn.sideHit);
+			BlockPos pos = rayTrace.getBlockPos();
+			BlockPos finalPos = pos.offset(rayTrace.sideHit);
 			IBlockState state = getEntityWorld().getBlockState(finalPos);
 			Block block = state.getBlock();
-			if((block.isAir(state, getEntityWorld(), finalPos) || block.isReplaceable(getEntityWorld(), finalPos)) && raytraceResultIn.sideHit != EnumFacing.DOWN) {
-				getEntityWorld().setBlockState(finalPos, Blocks.TORCH.getDefaultState().withProperty(BlockTorch.FACING, raytraceResultIn.sideHit));
+			if((block.isAir(state, getEntityWorld(), finalPos) || block.isReplaceable(getEntityWorld(), finalPos)) && rayTrace.sideHit != EnumFacing.DOWN) {
+				getEntityWorld().setBlockState(finalPos, Blocks.TORCH.getDefaultState().withProperty(BlockTorch.FACING, rayTrace.sideHit));
 				setDead();
 			}
 		}

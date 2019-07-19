@@ -1,11 +1,8 @@
 package vazkii.quark.world.block;
 
-import java.util.Random;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
-import net.minecraft.block.properties.IProperty;
 import net.minecraft.block.properties.PropertyEnum;
 import net.minecraft.block.state.BlockFaceShape;
 import net.minecraft.block.state.BlockStateContainer;
@@ -15,17 +12,21 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.IStringSerializable;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
-import vazkii.arl.block.BlockMetaVariants.EnumBase;
 import vazkii.arl.block.BlockMod;
 import vazkii.quark.base.block.IQuarkBlock;
 
+import javax.annotation.Nonnull;
+import java.util.Locale;
+import java.util.Random;
+
 public class BlockSpeleothem extends BlockMod implements IQuarkBlock {
 
-	public static PropertyEnum<EnumSize> SIZE = PropertyEnum.create("size", EnumSize.class);
+	public static final PropertyEnum<EnumSize> SIZE = PropertyEnum.create("size", EnumSize.class);
 	
 	public BlockSpeleothem(String name) {
 		super(name + "_speleothem", Material.ROCK);
@@ -42,7 +43,7 @@ public class BlockSpeleothem extends BlockMod implements IQuarkBlock {
 	}
 	
 	@Override
-	public boolean canPlaceBlockAt(World worldIn, BlockPos pos) {
+	public boolean canPlaceBlockAt(World worldIn, @Nonnull BlockPos pos) {
 		return getBearing(worldIn, pos) > 0;
 	}
 	
@@ -53,12 +54,13 @@ public class BlockSpeleothem extends BlockMod implements IQuarkBlock {
 	}
 	
 	@Override
-    public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
+	@SuppressWarnings("deprecation")
+	public void neighborChanged(IBlockState state, World worldIn, BlockPos pos, Block blockIn, BlockPos fromPos) {
 		int size = state.getValue(SIZE).strength;
 		if(getBearing(worldIn, pos) < size + 1) {
 			worldIn.playEvent(2001, pos, Block.getStateId(worldIn.getBlockState(pos)));
 			dropBlockAsItem(worldIn, pos, state, 0);
-            worldIn.setBlockToAir(pos);
+			worldIn.setBlockToAir(pos);
 		}
 	}
 	
@@ -68,14 +70,14 @@ public class BlockSpeleothem extends BlockMod implements IQuarkBlock {
 	}
 	
 	@Override
-	public boolean canSilkHarvest(World world, BlockPos pos, IBlockState state, EntityPlayer player) {
+	public boolean canSilkHarvest(World world, BlockPos pos, @Nonnull IBlockState state, EntityPlayer player) {
 		return true;
 	}
 	
 	@Override
-    public boolean isPassable(IBlockAccess worldIn, BlockPos pos) {
-        return false;
-    }
+	public boolean isPassable(IBlockAccess worldIn, BlockPos pos) {
+		return false;
+	}
 	
 	private int getBearing(IBlockAccess world, BlockPos pos) {
 		return Math.max(getStrength(world, pos.down()), getStrength(world, pos.up()));
@@ -83,7 +85,7 @@ public class BlockSpeleothem extends BlockMod implements IQuarkBlock {
 	
 	private int getStrength(IBlockAccess world, BlockPos pos) {
 		IBlockState state = world.getBlockState(pos);
-		if(state.getBlock().isFullBlock(state))
+		if(state.isFullBlock())
 			return 3;
 		
 		if(state.getPropertyKeys().contains(SIZE))
@@ -92,44 +94,53 @@ public class BlockSpeleothem extends BlockMod implements IQuarkBlock {
 		return 0;
 	}
 	
+	@Nonnull
 	@Override
+	@SuppressWarnings("deprecation")
 	public AxisAlignedBB getBoundingBox(IBlockState state, IBlockAccess source, BlockPos pos) {
 		return state.getValue(SIZE).aabb;
 	}
 	
 	@Override
-	public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, IBlockAccess worldIn, BlockPos pos) {
+	@SuppressWarnings("deprecation")
+	public AxisAlignedBB getCollisionBoundingBox(IBlockState blockState, @Nonnull IBlockAccess worldIn, @Nonnull BlockPos pos) {
 		return getBoundingBox(blockState, worldIn, pos);
 	}
 	
 	@Override
+	@SuppressWarnings("deprecation")
 	public boolean isFullCube(IBlockState state) {
 		return false;
 	}
 	
 	@Override
+	@SuppressWarnings("deprecation")
 	public boolean isFullBlock(IBlockState state) {
 		return false;
 	}
 	
 	@Override
+	@SuppressWarnings("deprecation")
 	public boolean isOpaqueCube(IBlockState state) {
 		return false;
 	}
 	
+	@Nonnull
 	@Override
-	public BlockFaceShape getBlockFaceShape(IBlockAccess p_193383_1_, IBlockState p_193383_2_, BlockPos p_193383_3_, EnumFacing p_193383_4_) {
+	@SuppressWarnings("deprecation")
+	public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos blockPos, EnumFacing face) {
 		return BlockFaceShape.UNDEFINED;
 	}
 	
 	@Override
-	public boolean canPlaceTorchOnTop(IBlockState state, IBlockAccess world, BlockPos pos) {
+	public boolean canPlaceTorchOnTop(@Nonnull IBlockState state, @Nonnull IBlockAccess world, @Nonnull BlockPos pos) {
 		return true;
 	}
 
+	@Nonnull
 	@Override
 	protected BlockStateContainer createBlockState() {
-		return new BlockStateContainer(this, new IProperty[] { SIZE });
+		return new BlockStateContainer(this, SIZE);
 	}
 
 	@Override
@@ -137,26 +148,33 @@ public class BlockSpeleothem extends BlockMod implements IQuarkBlock {
 		return state.getValue(SIZE).ordinal();
 	}
 
+	@Nonnull
 	@Override
+	@SuppressWarnings("deprecation")
 	public IBlockState getStateFromMeta(int meta) {
 		return getDefaultState().withProperty(SIZE, EnumSize.values()[Math.min(EnumSize.values().length - 1, meta)]);
 	}
 	
-	public static enum EnumSize implements EnumBase {
+	public enum EnumSize implements IStringSerializable {
 		
 		SMALL(0, 2),
 		MEDIUM(1, 4),
 		BIG(2, 8);
 		
-		private EnumSize(int strength, int width) {
+		EnumSize(int strength, int width) {
 			this.strength = strength;
 			
-			float pad = ((float) ((16 - width) / 2) / 16F);
+			float pad = (((16 - width) / 2f) / 16F);
 			aabb = new AxisAlignedBB(pad, 0F, pad, 1F - pad, 1F, 1F - pad);
 		}
 		
 		public final int strength;
 		public final AxisAlignedBB aabb;
+
+		@Override
+		public String getName() {
+			return name().toLowerCase(Locale.ROOT);
+		}
 	}
 
 }

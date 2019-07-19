@@ -10,21 +10,13 @@
  */
 package vazkii.quark.base.module;
 
-import java.io.File;
-import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-
 import net.minecraft.item.Item;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.client.event.ConfigChangedEvent;
-import net.minecraftforge.fml.common.FMLLog;
 import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -33,7 +25,9 @@ import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import vazkii.quark.api.module.ModuleLoadedEvent;
 import vazkii.quark.automation.QuarkAutomation;
+import vazkii.quark.base.Quark;
 import vazkii.quark.base.handler.RecipeProcessor;
 import vazkii.quark.base.lib.LibMisc;
 import vazkii.quark.building.QuarkBuilding;
@@ -47,25 +41,33 @@ import vazkii.quark.tweaks.QuarkTweaks;
 import vazkii.quark.vanity.QuarkVanity;
 import vazkii.quark.world.QuarkWorld;
 
+import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+
 public final class ModuleLoader {
 	
 	// Checks if the Java Debug Wire Protocol is enabled
 	public static final boolean DEBUG_MODE = ManagementFactory.getRuntimeMXBean().getInputArguments().toString().contains("-agentlib:jdwp"); 
 
 	private static List<Class<? extends Module>> moduleClasses;
-	public static Map<Class<? extends Module>, Module> moduleInstances = new HashMap();
-	public static Map<Class<? extends Feature>, Feature> featureInstances = new HashMap();
-	public static Map<String, Feature> featureClassnames = new HashMap();
+	public static final Map<Class<? extends Module>, Module> moduleInstances = new HashMap<>();
+	public static final Map<Class<? extends Feature>, Feature> featureInstances = new HashMap<>();
+	public static final Map<String, Feature> featureClassnames = new HashMap<>();
 
 	public static List<Module> enabledModules;
-	public static List<Runnable> lazyOreDictRegisters = new ArrayList();
+	public static final List<Runnable> lazyOreDictRegisters = new ArrayList<>();
 
 	public static Configuration config;
 	public static File configFile;
 	public static boolean firstLoad;
 
 	private static void setupModuleClasses() {
-		moduleClasses = new ArrayList();
+		moduleClasses = new ArrayList<>();
 
 		registerModule(QuarkTweaks.class);
 		registerModule(QuarkWorld.class);
@@ -87,7 +89,9 @@ public final class ModuleLoader {
 		setupModuleClasses();
 		moduleClasses.forEach(clazz -> {
 			try {
-				moduleInstances.put(clazz, clazz.newInstance());
+				Module instance = clazz.newInstance();
+				if (!MinecraftForge.EVENT_BUS.post(new ModuleLoadedEvent(instance)))
+					moduleInstances.put(clazz, instance);
 			} catch (Exception e) {
 				throw new RuntimeException("Can't initialize module " + clazz, e);
 			}
@@ -95,43 +99,43 @@ public final class ModuleLoader {
 
 		setupConfig(event);
 
-		forEachModule(module -> FMLLog.info("[Quark] Module " + module.name + " is " + (module.enabled ? "enabled" : "disabled")));
+		forEachModule(module -> Quark.LOG.info("Module " + module.name + " is " + (module.enabled ? "enabled" : "disabled")));
 
 		forEachEnabled(module -> module.preInit(event));
-		forEachEnabled(module -> module.postPreInit(event));
+		forEachEnabled(Module::postPreInit);
 		
 		RecipeProcessor.runConsumers();
 	}
 	
 	public static void init(FMLInitializationEvent event) {
-		forEachEnabled(module -> module.init(event));
+		forEachEnabled(Module::init);
 	}
 
 	public static void postInit(FMLPostInitializationEvent event) {
-		forEachEnabled(module -> module.postInit(event));
+		forEachEnabled(Module::postInit);
 	}
 
 	public static void finalInit(FMLPostInitializationEvent event) {
-		forEachEnabled(module -> module.finalInit(event));
+		forEachEnabled(Module::finalInit);
 	}
 	
 	@SideOnly(Side.CLIENT)
 	public static void preInitClient(FMLPreInitializationEvent event) {
-		forEachEnabled(module -> module.preInitClient(event));
+		forEachEnabled(Module::preInitClient);
 	}
 
 	@SideOnly(Side.CLIENT)
 	public static void initClient(FMLInitializationEvent event) {
-		forEachEnabled(module -> module.initClient(event));
+		forEachEnabled(Module::initClient);
 	}
 
 	@SideOnly(Side.CLIENT)
 	public static void postInitClient(FMLPostInitializationEvent event) {
-		forEachEnabled(module -> module.postInitClient(event));
+		forEachEnabled(Module::postInitClient);
 	}
 
 	public static void serverStarting(FMLServerStartingEvent event) {
-		forEachEnabled(module -> module.serverStarting(event));
+		forEachEnabled(Module::serverStarting);
 	}
 
 	public static void setupConfig(FMLPreInitializationEvent event) {
@@ -143,8 +147,6 @@ public final class ModuleLoader {
 		config.load();
 		
 		loadConfig();
-
-		MinecraftForge.EVENT_BUS.register(EventHandler.class);
 	}
 	
 	public static void loadConfig() {
@@ -159,7 +161,8 @@ public final class ModuleLoader {
 			}
 		});
 
-		enabledModules = new ArrayList(moduleInstances.values());
+
+		enabledModules = new ArrayList<>(moduleInstances.values());
 		enabledModules.removeIf(module -> !module.enabled);
 
 		loadModuleConfigs();
@@ -169,15 +172,17 @@ public final class ModuleLoader {
 	}
 
 	private static void loadModuleConfigs() {
-		forEachModule(module -> module.setupConfig());
+		forEachModule(Module::setupConfig);
 	}
 	
 	public static boolean isModuleEnabled(Class<? extends Module> clazz) {
-		return moduleInstances.get(clazz).enabled;
+		Module module = moduleInstances.get(clazz);
+		return module != null && module.enabled;
 	}
 
 	public static boolean isFeatureEnabled(Class<? extends Feature> clazz) {
-		return featureInstances.get(clazz).enabled;
+		Feature feature = featureInstances.get(clazz);
+		return feature != null && feature.enabled;
 	}
 
 	public static void forEachModule(Consumer<Module> consumer) {
@@ -193,6 +198,7 @@ public final class ModuleLoader {
 			moduleClasses.add(clazz);
 	}
 
+	@Mod.EventBusSubscriber(modid = LibMisc.MOD_ID)
 	public static class EventHandler {
 
 		@SubscribeEvent

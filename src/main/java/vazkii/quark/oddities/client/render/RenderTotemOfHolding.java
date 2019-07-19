@@ -5,18 +5,16 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.RayTraceResult.Type;
 import net.minecraftforge.fml.client.registry.IRenderFactory;
 import vazkii.arl.client.AtlasSpriteHelper;
 import vazkii.arl.util.ClientTicker;
-import vazkii.quark.management.client.render.RenderChestPassenger;
 import vazkii.quark.oddities.entity.EntityTotemOfHolding;
 import vazkii.quark.oddities.feature.TotemOfHolding;
-import vazkii.quark.world.client.render.RenderAshen;
-import net.minecraft.client.renderer.entity.Render;
-import vazkii.quark.oddities.entity.EntityTotemOfHolding;
+
+import javax.annotation.Nonnull;
 
 public class RenderTotemOfHolding extends Render<EntityTotemOfHolding> {
 
@@ -25,7 +23,7 @@ public class RenderTotemOfHolding extends Render<EntityTotemOfHolding> {
 	}
 
 	@Override
-	public void doRender(EntityTotemOfHolding entity, double x, double y, double z, float entityYaw, float partialTicks) {
+	public void doRender(@Nonnull EntityTotemOfHolding entity, double x, double y, double z, float entityYaw, float partialTicks) {
 		super.doRender(entity, x, y, z, entityYaw, partialTicks);
 		
 		int deathTicks = entity.getDeathTicks();
@@ -40,24 +38,34 @@ public class RenderTotemOfHolding extends Render<EntityTotemOfHolding> {
 		GlStateManager.rotate(rotation, 0F, 1F, 0F);
 		GlStateManager.translate(-0.5, translation, 0);
 		GlStateManager.scale(scale, scale, scale);
-		renderTotemIcon(entity);
+		renderTotemIcon();
 		GlStateManager.popMatrix();
 	}
 	
-	private void renderTotemIcon(EntityTotemOfHolding entity) { 
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240, 240);
+	@Override
+	protected boolean canRenderName(EntityTotemOfHolding entity) {
+		if(entity.hasCustomName()) {
+			Minecraft mc = Minecraft.getMinecraft();
+			return !mc.gameSettings.hideGUI && mc.objectMouseOver != null && mc.objectMouseOver.typeOfHit == Type.ENTITY && mc.objectMouseOver.entityHit == entity;
+		}
+		
+		return false;
+	}
+	
+	private void renderTotemIcon() {
+		OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240, 240);
 		Minecraft mc = Minecraft.getMinecraft();
 		mc.renderEngine.bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
 		AtlasSpriteHelper.renderIconThicc(TotemOfHolding.totemSprite, 1F / 16F);
 	}
 	
 	@Override
-	protected ResourceLocation getEntityTexture(EntityTotemOfHolding entity) {
+	protected ResourceLocation getEntityTexture(@Nonnull EntityTotemOfHolding entity) {
 		return null;
 	}
 	
-	public static IRenderFactory factory() {
-		return manager -> new RenderTotemOfHolding(manager);
+	public static IRenderFactory<EntityTotemOfHolding> factory() {
+		return RenderTotemOfHolding::new;
 	}
 
 }

@@ -10,19 +10,22 @@
  */
 package vazkii.quark.base.lib;
 
+import net.minecraft.util.ResourceLocation;
+
 import java.util.Arrays;
 import java.util.List;
 
-import net.minecraft.util.ResourceLocation;
-
 public final class LibMisc {
+
+	// Don't ask.
+	public static final String DEV_ENV_HACK = "[GRADLE.VERSION-GRADLE.BUILD,)";
 
 	// Mod Constants
 	public static final String MOD_ID = "quark";
 	public static final String MOD_NAME = MOD_ID;
 	public static final String BUILD = "GRADLE:BUILD";
 	public static final String VERSION = "GRADLE:VERSION-" + BUILD;
-	public static final String DEPENDENCIES = "required-before:autoreglib;after:jei@[4.6.0,);";
+	public static final String DEPENDENCIES = "required-after:forge@[14.23.5.2831,);required-before:autoreglib@[1.3-28,)" + DEV_ENV_HACK + ",;after:jei@[4.6.0,);";
 	public static final String PREFIX_MOD = MOD_ID + ":";
 
 	// Proxy Constants
@@ -30,8 +33,7 @@ public final class LibMisc {
 	public static final String PROXY_CLIENT = "vazkii.quark.base.proxy.ClientProxy";
 	public static final String GUI_FACTORY = "vazkii.quark.base.client.gui.GuiFactory";
 
-	public static final List<String> OREDICT_DYES = Arrays.asList(new String[]{
-			"dyeBlack",
+	public static final List<String> OREDICT_DYES = Arrays.asList("dyeBlack",
 			"dyeRed",
 			"dyeGreen",
 			"dyeBrown",
@@ -46,10 +48,9 @@ public final class LibMisc {
 			"dyeLightBlue",
 			"dyeMagenta",
 			"dyeOrange",
-			"dyeWhite"
-	});
+			"dyeWhite");
 	
-	public static final String MOD_WEBSITE = "https://quark.vazkii.us";
+	public static final String MOD_WEBSITE = "https://quark.vazkii.net";
 	
 	public static final ResourceLocation GENERAL_ICONS_RESOURCE = new ResourceLocation(MOD_ID, "textures/misc/general_icons.png");
 	

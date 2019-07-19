@@ -20,5 +20,4 @@ public class BlockBarkSlab extends BlockQuarkSlab implements IRecipeGrouped {
 	public String getRecipeGroup() {
 		return "bark_slab";
 	}
-	
 }

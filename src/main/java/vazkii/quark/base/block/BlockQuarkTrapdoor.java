@@ -18,18 +18,15 @@ import net.minecraft.block.properties.IProperty;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.ItemMeshDefinition;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.init.Blocks;
 import net.minecraft.item.EnumRarity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.IBlockAccess;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import vazkii.arl.item.ItemModBlock;
-import vazkii.arl.util.ProxyRegistry;
-import vazkii.quark.base.lib.LibMisc;
-import vazkii.quark.decoration.feature.IronLadders;
+
+import javax.annotation.Nonnull;
 
 public class BlockQuarkTrapdoor extends BlockTrapDoor implements IQuarkBlock {
 
@@ -45,27 +42,25 @@ public class BlockQuarkTrapdoor extends BlockTrapDoor implements IQuarkBlock {
 		variants = new String[] { name };
 		bareName = name;
 
-		setUnlocalizedName(name);
+		setTranslationKey(name);
 		useNeighborBrightness = true;
 	}
 	
-    @Override
-    public boolean isLadder(IBlockState state, IBlockAccess world, BlockPos pos, EntityLivingBase entity) {
-        if(state.getValue(OPEN))  {
-            IBlockState down = world.getBlockState(pos.down());
-            if(down.getBlock() == Blocks.LADDER || down.getBlock() == IronLadders.iron_ladder)
-                return down.getValue(FACING) == state.getValue(FACING);
-        }
-        
-        return false;
-    }
-
 	@Override
-	public Block setUnlocalizedName(String name) {
-		super.setUnlocalizedName(name);
-		setRegistryName(LibMisc.PREFIX_MOD + name);
-		ProxyRegistry.register(this);
-		ProxyRegistry.register(new ItemModBlock(this, new ResourceLocation(LibMisc.PREFIX_MOD + name)));
+	public boolean isLadder(IBlockState state, @Nonnull IBlockAccess world, @Nonnull BlockPos pos, EntityLivingBase entity) {
+		if(state.getValue(OPEN))  {
+			IBlockState down = world.getBlockState(pos.down());
+			return down.getBlock().isLadder(down, world, pos.down(), entity);
+		}
+
+		return false;
+	}
+
+	@Nonnull
+	@Override
+	public Block setTranslationKey(@Nonnull String name) {
+		super.setTranslationKey(name);
+		register(name);
 		return this;
 	}
 
@@ -103,6 +98,16 @@ public class BlockQuarkTrapdoor extends BlockTrapDoor implements IQuarkBlock {
 	@Override
 	public Class getVariantEnum() {
 		return null;
+	}
+
+	@Override
+	public int getFlammability(IBlockAccess world, BlockPos pos, EnumFacing face) {
+		return 20;
+	}
+
+	@Override
+	public int getFireSpreadSpeed(IBlockAccess world, BlockPos pos, EnumFacing face) {
+		return 5;
 	}
 
 }

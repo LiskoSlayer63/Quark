@@ -36,13 +36,15 @@ import vazkii.quark.misc.entity.EntityArrowExplosive;
 import vazkii.quark.misc.entity.EntityArrowTorch;
 import vazkii.quark.misc.item.ItemModArrow;
 
+import javax.annotation.Nonnull;
+
 public class ExtraArrows extends Feature {
 
 	public static Item arrow_ender;
 	public static Item arrow_explosive;
 	public static Item arrow_torch;
 
-	boolean enableEnder, enableExplosive, enableTorch;
+	public static boolean enableEnder, enableExplosive, enableTorch;
 	
 	public static double explosiveArrowPower;
 	public static boolean explosiveArrowDestroysBlocks;
@@ -63,7 +65,7 @@ public class ExtraArrows extends Feature {
 			String enderArrowName = "quark:arrow_ender";
 			arrow_ender = new ItemModArrow("arrow_ender", (World worldIn, ItemStack stack, EntityLivingBase shooter) -> new EntityArrowEnder(worldIn, shooter));
 			EntityRegistry.registerModEntity(new ResourceLocation(enderArrowName), EntityArrowEnder.class, enderArrowName, LibEntityIDs.ARROW_ENDER, Quark.instance, 64, 10, true);
-			BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(arrow_ender, new ArrowBehaviour((World world, IPosition pos) -> new EntityArrowEnder(world, pos)));
+			BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(arrow_ender, new ArrowBehaviour(EntityArrowEnder::new));
 			RecipeHandler.addShapelessOreDictRecipe(ProxyRegistry.newStack(arrow_ender), ProxyRegistry.newStack(Items.ARROW), ProxyRegistry.newStack(Items.ENDER_PEARL));
 		}
 		
@@ -71,7 +73,7 @@ public class ExtraArrows extends Feature {
 			String explosiveArrowName = "quark:arrow_explosive";
 			arrow_explosive = new ItemModArrow("arrow_explosive", (World worldIn, ItemStack stack, EntityLivingBase shooter) -> new EntityArrowExplosive(worldIn, shooter));
 			EntityRegistry.registerModEntity(new ResourceLocation(explosiveArrowName), EntityArrowExplosive.class, explosiveArrowName, LibEntityIDs.ARROW_EXPLOSIVE, Quark.instance, 64, 10, true);
-			BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(arrow_explosive, new ArrowBehaviour((World world, IPosition pos) -> new EntityArrowExplosive(world, pos)));
+			BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(arrow_explosive, new ArrowBehaviour(EntityArrowExplosive::new));
 			RecipeHandler.addShapelessOreDictRecipe(ProxyRegistry.newStack(arrow_explosive), ProxyRegistry.newStack(Items.ARROW), ProxyRegistry.newStack(Items.GUNPOWDER), ProxyRegistry.newStack(Items.GUNPOWDER));
 		}
 		
@@ -79,13 +81,13 @@ public class ExtraArrows extends Feature {
 			String torchArrowName = "quark:arrow_torch";
 			arrow_torch = new ItemModArrow("arrow_torch", (World worldIn, ItemStack stack, EntityLivingBase shooter) -> new EntityArrowTorch(worldIn, shooter));
 			EntityRegistry.registerModEntity(new ResourceLocation(torchArrowName), EntityArrowTorch.class, torchArrowName, LibEntityIDs.ARROW_TORCH, Quark.instance, 64, 10, true);
-			BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(arrow_torch, new ArrowBehaviour((World world, IPosition pos) -> new EntityArrowTorch(world, pos)));
+			BlockDispenser.DISPENSE_BEHAVIOR_REGISTRY.putObject(arrow_torch, new ArrowBehaviour(EntityArrowTorch::new));
 			RecipeHandler.addShapelessOreDictRecipe(ProxyRegistry.newStack(arrow_torch), ProxyRegistry.newStack(Items.ARROW), ProxyRegistry.newStack(Blocks.TORCH));
 		}
 	}
 	
 	@Override
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		if(enableEnder)
 			RenderingRegistry.registerEntityRenderingHandler(EntityArrowEnder.class, RenderExtraArrow.FACTORY_ENDER);
 		
@@ -103,21 +105,22 @@ public class ExtraArrows extends Feature {
 
 	public static class ArrowBehaviour extends BehaviorProjectileDispense {
 
-		ArrowProvider provider;
+		private final ArrowProvider provider;
 		
 		public ArrowBehaviour(ArrowProvider provider) {
 			this.provider = provider;
 		}
 		
+		@Nonnull
 		@Override
-		protected IProjectile getProjectileEntity(World worldIn, IPosition position, ItemStack stackIn) {
+		protected IProjectile getProjectileEntity(@Nonnull World worldIn, @Nonnull IPosition position, @Nonnull ItemStack stackIn) {
 			EntityArrow arrow = provider.provide(worldIn, position);
 			arrow.pickupStatus = EntityArrow.PickupStatus.ALLOWED;
 			return arrow;
 		}
 		
-		public static interface ArrowProvider {
-			public EntityArrow provide(World world, IPosition pos);
+		public interface ArrowProvider {
+			EntityArrow provide(World world, IPosition pos);
 		}
 
 	}

@@ -1,8 +1,11 @@
 package vazkii.quark.vanity.client.emotes;
 
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.quark.vanity.feature.EmoteSystem;
 
+@SideOnly(Side.CLIENT)
 public class CustomEmoteDescriptor extends EmoteDescriptor {
 
 	public CustomEmoteDescriptor(String name, String regName, int index) {
@@ -18,13 +21,13 @@ public class CustomEmoteDescriptor extends EmoteDescriptor {
 	}
 	
 	@Override
-	public String getUnlocalizedName() {
+	public String getTranslationKey() {
 		return ((CustomEmoteTemplate) template).getName();
 	}
 	
 	@Override
 	public String getLocalizedName() {
-		return getUnlocalizedName();
+		return getTranslationKey();
 	}
 
 }

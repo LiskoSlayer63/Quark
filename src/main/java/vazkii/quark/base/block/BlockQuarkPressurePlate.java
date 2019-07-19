@@ -1,26 +1,21 @@
 package vazkii.quark.base.block;
 
-import java.util.List;
-
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockPressurePlate;
-import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.properties.IProperty;
 import net.minecraft.client.renderer.ItemMeshDefinition;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.EnumRarity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-import vazkii.arl.item.ItemModBlock;
-import vazkii.arl.util.ProxyRegistry;
-import vazkii.quark.base.lib.LibMisc;
+
+import javax.annotation.Nonnull;
+import java.util.List;
 
 public abstract class BlockQuarkPressurePlate extends BlockPressurePlate implements IQuarkBlock {
 
@@ -33,11 +28,11 @@ public abstract class BlockQuarkPressurePlate extends BlockPressurePlate impleme
 		bareName = name;
 		variants = new String[] { bareName };
 
-		setUnlocalizedName(bareName);
+		setTranslationKey(bareName);
 	}
 
 	@Override
-	protected int computeRedstoneStrength(World worldIn, BlockPos pos) {
+	protected int computeRedstoneStrength(@Nonnull World worldIn, @Nonnull BlockPos pos) {
 		AxisAlignedBB axisalignedbb = PRESSURE_AABB.offset(pos);
 		List<? extends Entity> list = getValidEntities(worldIn, axisalignedbb);
 
@@ -51,12 +46,11 @@ public abstract class BlockQuarkPressurePlate extends BlockPressurePlate impleme
 	
 	protected abstract List<Entity> getValidEntities(World world, AxisAlignedBB aabb);
 
+	@Nonnull
 	@Override
-	public Block setUnlocalizedName(String name) {
-		super.setUnlocalizedName(name);
-		setRegistryName(LibMisc.PREFIX_MOD + name);
-		ProxyRegistry.register(this);
-		ProxyRegistry.register(new ItemModBlock(this, new ResourceLocation(LibMisc.PREFIX_MOD + name)));
+	public Block setTranslationKey(@Nonnull String name) {
+		super.setTranslationKey(name);
+		register(name);
 		return this;
 	}
 

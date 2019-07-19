@@ -14,9 +14,7 @@ import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.crafting.Ingredient;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.oredict.OreDictionary;
 import vazkii.arl.recipe.BlacklistOreIngredient;
 import vazkii.arl.recipe.RecipeHandler;
 import vazkii.arl.util.ProxyRegistry;
@@ -32,8 +30,8 @@ public class VariedTrapdoors extends Feature {
 	public static Block acacia_trapdoor;
 	public static Block dark_oak_trapdoor;
 
-	boolean renameVanillaTrapdoor;
-	int recipeOutput;
+	public static boolean renameVanillaTrapdoor;
+	public static int recipeOutput;
 
 	@Override
 	public void setupConfig() {
@@ -53,7 +51,7 @@ public class VariedTrapdoors extends Feature {
 	}
 
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {		
+	public void postPreInit() {
 		RecipeProcessor.addWoodReplacements(recipeOutput, Blocks.TRAPDOOR);
 		
 		RecipeHandler.addOreDictRecipe(ProxyRegistry.newStack(spruce_trapdoor, recipeOutput),
@@ -73,7 +71,7 @@ public class VariedTrapdoors extends Feature {
 				'W', ProxyRegistry.newStack(Blocks.PLANKS, 1, 5));
 
 		if(renameVanillaTrapdoor)
-			Blocks.TRAPDOOR.setUnlocalizedName("oak_trapdoor");
+			Blocks.TRAPDOOR.setTranslationKey("oak_trapdoor");
 
 		// Low priority ore dictionary recipe
 		Ingredient wood = new BlacklistOreIngredient("plankWood", (stack) -> stack.getItem() == Item.getItemFromBlock(Blocks.PLANKS));

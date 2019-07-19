@@ -6,6 +6,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import vazkii.arl.network.NetworkMessage;
 import vazkii.quark.base.Quark;
 import vazkii.quark.base.lib.LibGuiIDs;
+import vazkii.quark.oddities.inventory.ContainerBackpack;
 
 public class MessageHandleBackpack extends NetworkMessage<MessageHandleBackpack> {
 
@@ -20,11 +21,13 @@ public class MessageHandleBackpack extends NetworkMessage<MessageHandleBackpack>
 	@Override
 	public IMessage handleMessage(MessageContext context) {
 		EntityPlayerMP player = context.getServerHandler().player;
-		player.getServer().addScheduledTask(() -> {
+		player.server.addScheduledTask(() -> {
 			if(open)
 				player.openGui(Quark.instance, LibGuiIDs.BACKPACK, player.world, 0, 0, 0);
-			else
+			else {
+				ContainerBackpack.saveCraftingInventory(player);
 				player.openContainer = player.inventoryContainer;
+			}
 		});
 		
 		return null;

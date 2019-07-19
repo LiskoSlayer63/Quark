@@ -1,7 +1,5 @@
 package vazkii.quark.oddities.feature;
 
-import java.util.List;
-
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
@@ -32,6 +30,9 @@ import vazkii.quark.oddities.client.render.RenderTotemOfHolding;
 import vazkii.quark.oddities.entity.EntityTotemOfHolding;
 import vazkii.quark.oddities.item.ItemSoulCompass;
 import vazkii.quark.world.feature.Wraiths;
+
+import java.util.List;
+import java.util.Objects;
 
 public class TotemOfHolding extends Feature {
 	
@@ -67,7 +68,7 @@ public class TotemOfHolding extends Feature {
 	}
 	
 	@Override
-	public void postPreInit(FMLPreInitializationEvent event) {
+	public void postPreInit() {
 		if(enableSoulCompass)
 			RecipeHandler.addShapelessOreDictRecipe(new ItemStack(soul_compass), 
 					(Wraiths.soul_bead == null ? new ItemStack(Blocks.SOUL_SAND) : new ItemStack(Wraiths.soul_bead)), 
@@ -75,7 +76,7 @@ public class TotemOfHolding extends Feature {
 	}
 	
 	@Override
-	public void preInitClient(FMLPreInitializationEvent event) {
+	public void preInitClient() {
 		RenderingRegistry.registerEntityRenderingHandler(EntityTotemOfHolding.class, RenderTotemOfHolding.factory());
 	}
 	
@@ -98,8 +99,14 @@ public class TotemOfHolding extends Feature {
 				EntityTotemOfHolding totem = new EntityTotemOfHolding(player.world);
 				totem.setPosition(player.posX, Math.max(3, player.posY + 1), player.posZ);
 				totem.setOwner(player);
-				drops.stream().map(EntityItem::getItem).forEach(totem::addItem);
-				player.world.spawnEntity(totem);
+				totem.setCustomNameTag(player.getDisplayNameString());
+				drops.stream()
+						.filter(Objects::nonNull)
+						.map(EntityItem::getItem)
+						.filter(stack -> !stack.isEmpty())
+						.forEach(totem::addItem);
+				if (!player.world.isRemote)
+					player.world.spawnEntity(totem);
 				
 				persistent.setString(TAG_LAST_TOTEM, totem.getUniqueID().toString());
 				

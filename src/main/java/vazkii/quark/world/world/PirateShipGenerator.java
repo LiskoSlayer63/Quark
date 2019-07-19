@@ -10,10 +10,6 @@
  */
 package vazkii.quark.world.world;
 
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-
 import net.minecraft.block.BlockChest;
 import net.minecraft.block.BlockDispenser;
 import net.minecraft.block.BlockLiquid;
@@ -44,9 +40,13 @@ import vazkii.quark.base.handler.DimensionConfig;
 import vazkii.quark.world.entity.EntityPirate;
 import vazkii.quark.world.feature.PirateShips;
 
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Random;
+
 public class PirateShipGenerator implements IWorldGenerator {
 
-	DimensionConfig dims;
+	private final DimensionConfig dims;
 	
 	public PirateShipGenerator(DimensionConfig dims) {
 		this.dims = dims;
@@ -86,7 +86,7 @@ public class PirateShipGenerator implements IWorldGenerator {
 		for(int x = 0; x < size.getX(); x++)
 			for(int y = 0; y < size.getY(); y++)
 				for(int z = 0; z < size.getZ(); z++) {
-					BlockPos checkPos = pos.add(template.transformedBlockPos(settings, new BlockPos(x, y, z)));
+					BlockPos checkPos = pos.add(Template.transformedBlockPos(settings, new BlockPos(x, y, z)));
 					IBlockState checkState = world.getBlockState(checkPos);
 					if(!checkState.getBlock().isAir(checkState, world, checkPos) && checkState.getBlock() != Blocks.WATER)
 						return; // Obstructed, can't generate here
@@ -146,17 +146,23 @@ public class PirateShipGenerator implements IWorldGenerator {
 				}
 
 				String chestOrientation = tokens[1];
-				EnumFacing chestFacing = settings.getRotation().rotate(EnumFacing.byName(chestOrientation));
+				EnumFacing chestFacing = EnumFacing.byName(chestOrientation);
+				if (chestFacing == null)
+					chestFacing = EnumFacing.NORTH;
+				chestFacing = settings.getRotation().rotate(chestFacing);
 				IBlockState chestState = Blocks.CHEST.getDefaultState().withProperty(BlockChest.FACING, chestFacing);
 				world.setBlockState(dataPos, chestState);
 
 				TileEntity tile = world.getTileEntity(dataPos);
-				if(tile != null && tile instanceof TileEntityLockableLoot)
+				if(tile instanceof TileEntityLockableLoot)
 					((TileEntityLockableLoot) tile).setLootTable(PirateShips.PIRATE_CHEST_LOOT_TABLE, random.nextLong());
 				break;
 			case "cannon":
 				String dispenserOrientation = tokens[1];
-				EnumFacing dispenserFacing = settings.getRotation().rotate(EnumFacing.byName(dispenserOrientation));
+				EnumFacing dispenserFacing = EnumFacing.byName(dispenserOrientation);
+				if (dispenserFacing == null)
+					dispenserFacing = EnumFacing.NORTH;
+				dispenserFacing = settings.getRotation().rotate(dispenserFacing);
 				IBlockState dispenserState = Blocks.DISPENSER.getDefaultState().withProperty(BlockDispenser.FACING, dispenserFacing);
 				world.setBlockState(dataPos, dispenserState);
 
@@ -169,19 +175,19 @@ public class PirateShipGenerator implements IWorldGenerator {
 	}
 
 	private static BlockPos getTopLiquidBlock(World world, BlockPos pos) {
-		Chunk chunk = world.getChunkFromBlockCoords(pos);
-		BlockPos blockpos;
-		BlockPos blockpos1;
+		Chunk chunk = world.getChunk(pos);
+		BlockPos checkPos;
+		BlockPos nextPos;
 
-		for(blockpos = new BlockPos(pos.getX(), chunk.getTopFilledSegment() + 16, pos.getZ()); blockpos.getY() >= 0; blockpos = blockpos1) {
-			blockpos1 = blockpos.down();
-			IBlockState state = chunk.getBlockState(blockpos1);
+		for(checkPos = new BlockPos(pos.getX(), chunk.getTopFilledSegment() + 16, pos.getZ()); checkPos.getY() >= 0; checkPos = nextPos) {
+			nextPos = checkPos.down();
+			IBlockState state = chunk.getBlockState(nextPos);
 
 			if(state.getBlock() instanceof BlockLiquid)
 				break;
 		}
 
-		return blockpos;
+		return checkPos;
 	}
 
 }

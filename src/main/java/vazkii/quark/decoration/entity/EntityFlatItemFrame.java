@@ -10,9 +10,7 @@
  */
 package vazkii.quark.decoration.entity;
 
-import com.google.common.base.Predicate;
 import io.netty.buffer.ByteBuf;
-import javax.annotation.Nullable;
 import net.minecraft.block.BlockRedstoneDiode;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
@@ -24,9 +22,6 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemMap;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.datasync.DataParameter;
-import net.minecraft.network.datasync.DataSerializers;
-import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -34,18 +29,15 @@ import net.minecraft.world.World;
 import net.minecraft.world.storage.MapData;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 import org.apache.commons.lang3.Validate;
-import vazkii.quark.decoration.feature.ColoredItemFrames;
+
+import java.util.function.Predicate;
 
 public class EntityFlatItemFrame extends EntityItemFrame implements IEntityAdditionalSpawnData {
 
-	protected static final Predicate<Entity> IS_HANGING_ENTITY = new Predicate<Entity>() {
-		public boolean apply(@Nullable Entity p_apply_1_) {
-			return p_apply_1_ instanceof EntityHanging;
-		}
-	};
+	protected static final Predicate<Entity> IS_HANGING_ENTITY = entity -> entity instanceof EntityHanging;
 
-	private static final String TAG_ITEMDROPCHANCE = "ItemDropChance";
-	private static final String TAG_REALFACINGDIRECTION = "RealFacing";
+	private static final String TAG_ITEM_DROP_CHANCE = "ItemDropChance";
+	private static final String TAG_REAL_FACING_DIRECTION = "RealFacing";
 
 	public EnumFacing realFacingDirection;
 	private float itemDropChance = 1.0F;
@@ -54,14 +46,14 @@ public class EntityFlatItemFrame extends EntityItemFrame implements IEntityAddit
 		super(worldIn);
 	}
 
-	public EntityFlatItemFrame(World worldIn, BlockPos p_i45852_2_, EnumFacing p_i45852_3_) {
-		super(worldIn, p_i45852_2_, p_i45852_3_);
+	public EntityFlatItemFrame(World worldIn, BlockPos blockPos, EnumFacing face) {
+		super(worldIn, blockPos, face);
 	}
 
 	@Override
-	public void dropItemOrSelf(Entity entityIn, boolean p_146065_2_) {
-		if(!p_146065_2_) {
-			super.dropItemOrSelf(entityIn, p_146065_2_);
+	public void dropItemOrSelf(Entity entityIn, boolean creative) {
+		if(!creative) {
+			super.dropItemOrSelf(entityIn, false);
 			return;
 		}
 
@@ -94,10 +86,10 @@ public class EntityFlatItemFrame extends EntityItemFrame implements IEntityAddit
 
 	@Override
 	public EntityItem entityDropItem(ItemStack stack, float offsetY) {
-		EntityItem entityitem = new EntityItem(this.world, this.posX + (double)((float)this.realFacingDirection.getFrontOffsetX() * 0.15F), this.posY + (double)offsetY, this.posZ + (double)((float)this.realFacingDirection.getFrontOffsetZ() * 0.15F), stack);
+		EntityItem entityitem = new EntityItem(this.world, this.posX + (this.realFacingDirection.getXOffset() * 0.25F), this.posY + offsetY + (this.realFacingDirection.getYOffset() * 0.25F), this.posZ + (this.realFacingDirection.getZOffset() * 0.25F), stack);
 		entityitem.setDefaultPickupDelay();
 		if (realFacingDirection == EnumFacing.DOWN)
-			entityitem.motionY = -entityitem.motionY;
+			entityitem.motionY = -Math.abs(entityitem.motionY);
 		this.world.spawnEntity(entityitem);
 		return entityitem;
 	}
@@ -110,11 +102,11 @@ public class EntityFlatItemFrame extends EntityItemFrame implements IEntityAddit
 			} else {
 				BlockPos blockpos = this.hangingPosition.offset(this.realFacingDirection.getOpposite());
 				IBlockState iblockstate = this.world.getBlockState(blockpos);
-				if(!iblockstate.isSideSolid(this.world, blockpos, this.realFacingDirection))                  
+				if(!iblockstate.isSideSolid(this.world, blockpos, this.realFacingDirection))
 					if(!iblockstate.getMaterial().isSolid() && !BlockRedstoneDiode.isDiode(iblockstate))
 						return false;
 
-				return this.world.getEntitiesInAABBexcluding(this, this.getEntityBoundingBox(), IS_HANGING_ENTITY).isEmpty();
+				return this.world.getEntitiesInAABBexcluding(this, this.getEntityBoundingBox(), IS_HANGING_ENTITY::test).isEmpty();
 			}
 		} else
 			return super.onValidSurface();
@@ -125,7 +117,7 @@ public class EntityFlatItemFrame extends EntityItemFrame implements IEntityAddit
 		Validate.notNull(facingDirectionIn);
 		this.realFacingDirection = facingDirectionIn;
 		this.facingDirection = realFacingDirection.getAxis() == EnumFacing.Axis.Y ? EnumFacing.SOUTH : realFacingDirection;
-		this.rotationYaw = realFacingDirection.getAxis() == EnumFacing.Axis.Y ? 0 : (float)(this.realFacingDirection.getHorizontalIndex() * 90);
+		this.rotationYaw = realFacingDirection.getAxis() == EnumFacing.Axis.Y ? 0 : (this.realFacingDirection.getHorizontalIndex() * 90);
 		this.rotationPitch = realFacingDirection.getAxis() == EnumFacing.Axis.Y ? (realFacingDirection == EnumFacing.UP ? -90.0F : 90.0F) : 0F;
 		this.prevRotationYaw = this.rotationYaw;
 		this.updateBoundingBox();
@@ -137,14 +129,14 @@ public class EntityFlatItemFrame extends EntityItemFrame implements IEntityAddit
 			return;
 		
 		if(this.realFacingDirection.getAxis() == EnumFacing.Axis.Y) {
-			double d0 = (double)this.hangingPosition.getX() + 0.5D;
-			double d1 = (double)this.hangingPosition.getY() + 0.5D;
-			double d2 = (double)this.hangingPosition.getZ() + 0.5D;
-			d1 = d1 - (double)this.realFacingDirection.getFrontOffsetY() * 0.46875D;
+			double d0 = this.hangingPosition.getX() + 0.5D;
+			double d1 = this.hangingPosition.getY() + 0.5D;
+			double d2 = this.hangingPosition.getZ() + 0.5D;
+			d1 = d1 - this.realFacingDirection.getYOffset() * 0.46875D;
 
-			double d6 = (double)this.getHeightPixels();
-			double d7 = -(double)this.realFacingDirection.getFrontOffsetY();
-			double d8 = (double)this.getHeightPixels();
+			double d6 = this.getHeightPixels();
+			double d7 = -this.realFacingDirection.getYOffset();
+			double d8 = this.getHeightPixels();
 
 			d6 = d6 / 32.0D;
 			d7 = d7 / 32.0D;
@@ -159,31 +151,33 @@ public class EntityFlatItemFrame extends EntityItemFrame implements IEntityAddit
 			super.updateBoundingBox();
 	}
 
+	@SuppressWarnings("ConstantConditions")
 	private void removeFrameFromMap(ItemStack stack) {
 		if(!stack.isEmpty()) {
 			if(stack.getItem() instanceof ItemMap) {
 				MapData mapdata = ((ItemMap) stack.getItem()).getMapData(stack, getEntityWorld());
-				mapdata.mapDecorations.remove("frame-" + getEntityId());
+				if (mapdata != null)
+					mapdata.mapDecorations.remove("frame-" + getEntityId());
 			}
 
-			stack.setItemFrame((EntityItemFrame) null);
+			stack.setItemFrame(null);
 		}
 	}
 
 	@Override
 	public void writeEntityToNBT(NBTTagCompound compound) {
-		compound.setByte(TAG_REALFACINGDIRECTION, (byte)this.realFacingDirection.getIndex());
+		compound.setByte(TAG_REAL_FACING_DIRECTION, (byte)this.realFacingDirection.getIndex());
 		super.writeEntityToNBT(compound);
 	}
 
 	@Override
 	public void readEntityFromNBT(NBTTagCompound compound) {
-		if(compound.hasKey(TAG_ITEMDROPCHANCE, 99)) {
-			itemDropChance = compound.getFloat(TAG_ITEMDROPCHANCE);
+		if(compound.hasKey(TAG_ITEM_DROP_CHANCE, 99)) {
+			itemDropChance = compound.getFloat(TAG_ITEM_DROP_CHANCE);
 		}
 
 		super.readEntityFromNBT(compound);
-		this.updateFacingWithBoundingBox(EnumFacing.getFront(compound.getByte(TAG_REALFACINGDIRECTION)));
+		this.updateFacingWithBoundingBox(EnumFacing.byIndex(compound.getByte(TAG_REAL_FACING_DIRECTION)));
 	}
 
 	@Override
@@ -193,7 +187,7 @@ public class EntityFlatItemFrame extends EntityItemFrame implements IEntityAddit
 
 	@Override
 	public void readSpawnData(ByteBuf additionalData) {
-		updateFacingWithBoundingBox(EnumFacing.getFront(additionalData.readShort()));
+		updateFacingWithBoundingBox(EnumFacing.byIndex(additionalData.readShort()));
 	}
 
 }
