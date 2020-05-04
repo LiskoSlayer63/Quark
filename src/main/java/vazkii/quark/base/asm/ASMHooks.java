@@ -18,11 +18,13 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.item.EntityMinecart;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntityPiston;
+import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
@@ -34,9 +36,9 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.quark.automation.client.render.PistonTileEntityRenderer;
 import vazkii.quark.automation.feature.ChainLinkage;
-import vazkii.quark.automation.feature.PistonSpikes;
 import vazkii.quark.automation.feature.PistonsMoveTEs;
 import vazkii.quark.automation.feature.PistonsPushPullItems;
+import vazkii.quark.base.handler.QuarkPistonStructureHelper;
 import vazkii.quark.client.feature.BetterFireEffect;
 import vazkii.quark.client.feature.ItemsFlashBeforeExpiring;
 import vazkii.quark.client.feature.RenderItemsInChat;
@@ -44,7 +46,6 @@ import vazkii.quark.client.feature.ShowInvalidSlots;
 import vazkii.quark.decoration.feature.IronLadders;
 import vazkii.quark.decoration.feature.MoreBannerLayers;
 import vazkii.quark.experimental.features.BetterNausea;
-import vazkii.quark.experimental.features.CollateralPistonMovement;
 import vazkii.quark.experimental.features.ColoredLights;
 import vazkii.quark.management.feature.BetterCraftShifting;
 import vazkii.quark.misc.feature.*;
@@ -93,9 +94,9 @@ public final class ASMHooks {
 		ChainRenderer.renderChain(render, x, y, z, entity, partTicks);
 	}
 	
-	public static void onBoatUpdate(EntityBoat boat) {
-		BoatSails.onBoatUpdate(boat);
-		ChainLinkage.onBoatUpdate(boat);
+	public static void onEntityUpdate(Entity entity) {
+		BoatSails.onBoatUpdate(entity);
+		ChainLinkage.onEntityUpdate(entity);
 	}
 	
 	public static void boatDrops(EntityBoat boat) {
@@ -114,14 +115,14 @@ public final class ASMHooks {
 
 	// ===== PISTON BLOCK BREAKERS & PISTONS MOVE TES & COLLATERAL PISTON MOVEMENT ===== //
 	
-	public static void onPistonMove(World world, BlockPos sourcePos, BlockPistonStructureHelper helper, EnumFacing facing, boolean extending) {
-		EnumFacing realFacing = extending ? facing : facing.getOpposite();
-		
-		PistonSpikes.breakStuffWithSpikes(world, sourcePos, helper, realFacing, extending);
-		CollateralPistonMovement.applyCollateralMovements(world, helper, realFacing, extending);
-		PistonsMoveTEs.detachTileEntities(world, helper, realFacing);
-	}	
-	
+	public static BlockPistonStructureHelper transformStructureHelper(BlockPistonStructureHelper helper, World world, BlockPos sourcePos, EnumFacing facing, boolean extending) {
+		return new QuarkPistonStructureHelper(helper, world, sourcePos, facing, extending);
+	}
+
+	public static void postPistonPush(BlockPistonStructureHelper helper, World world, EnumFacing facing, boolean extending) {
+		PistonsMoveTEs.detachTileEntities(world, helper, facing, extending);
+	}
+
 	// ===== BETTER CRAFT SHIFTING ===== //
 	
 	public static int getMaxInventoryBoundaryCrafting(int min, int max) {
@@ -151,8 +152,8 @@ public final class ASMHooks {
 	}
 	
 	@SideOnly(Side.CLIENT)
-	public static void renderPistonBlock(BlockPos pos, IBlockState state, BufferBuilder buffer, World world) {
-		PistonTileEntityRenderer.renderPistonBlock(pos, state, buffer, world);
+	public static boolean renderPistonBlock(TileEntityPiston piston, double x, double y, double z, float pTicks) {
+		return PistonTileEntityRenderer.renderPistonBlock(piston, x, y, z, pTicks);
 	}
 	
 	// ===== PISTONS PUSH/PULL ITEMS ===== //
@@ -236,9 +237,17 @@ public final class ASMHooks {
 		return Pickarang.canSharpnessApply(stack);
 	}
 
+	public static DamageSource createPlayerDamage(EntityPlayer player) {
+		return Pickarang.createDamageSource(player);
+	}
+
 	// ===== RENDER ITEMS IN CHAT ==== //
 	public static ITextComponent createStackComponent(ITextComponent component) {
 		return RenderItemsInChat.createStackComponent(component);
+	}
+
+	public static int transformQuadRenderColor(int src) {
+		return RenderItemsInChat.transformColor(src);
 	}
 
 	// ===== HOE SICKLES ==== //

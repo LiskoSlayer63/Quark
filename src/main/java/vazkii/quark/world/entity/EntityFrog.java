@@ -25,9 +25,11 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.quark.base.sounds.QuarkSounds;
 import vazkii.quark.base.util.CommonReflectiveAccessor;
+import vazkii.quark.base.util.EntityOpacityHandler;
+import vazkii.quark.world.entity.ai.EntityAIFavorBlock;
+import vazkii.quark.world.entity.ai.EntityAIPassenger;
 import vazkii.quark.world.entity.ai.EntityAITemptButNice;
 import vazkii.quark.world.feature.Frogs;
-import vazkii.quark.world.entity.ai.EntityAIFavorBlock;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,14 +48,18 @@ public class EntityFrog extends EntityAnimal {
 	public int spawnCd = -1;
 	public int spawnChain = 30;
 
+	public boolean isDuplicate;
+
 	public EntityFrog(World worldIn) {
 		this(worldIn, 1);
 	}
 
 	public EntityFrog(World worldIn, float sizeModifier) {
 		super(worldIn);
-		setSize(0.9f * sizeModifier, 0.5f * sizeModifier);
-		dataManager.set(SIZE_MODIFIER, sizeModifier);
+		if (sizeModifier != 1) {
+			setSize(0.65f * sizeModifier, 0.5f * sizeModifier);
+			dataManager.set(SIZE_MODIFIER, sizeModifier);
+		}
 
 		this.jumpHelper = new FrogJumpHelper();
 		this.moveHelper = new FrogMoveHelper();
@@ -70,15 +76,16 @@ public class EntityFrog extends EntityAnimal {
 
 	@Override
 	protected void initEntityAI() {
-		tasks.addTask(0, new EntityAISwimming(this));
-		tasks.addTask(1, new AIPanic(1.25));
-		tasks.addTask(2, new EntityAIMate(this, 1.0));
-		tasks.addTask(3, new EntityAITemptButNice(this, 1.2, false, TEMPTATION_ITEMS, TEMPTATION_ITEMS_BUT_NICE));
-		tasks.addTask(4, new EntityAIFollowParent(this, 1.1));
-		tasks.addTask(5, new EntityAIFavorBlock(this, 1, Blocks.WATERLILY));
-		tasks.addTask(6, new EntityAIWanderAvoidWater(this, 1, 0.5F));
-		tasks.addTask(7, new EntityAIWatchClosest(this, EntityPlayer.class, 6));
-		tasks.addTask(8, new EntityAILookIdle(this));
+		tasks.addTask(0, new EntityAIPassenger(this));
+		tasks.addTask(1, new EntityAISwimming(this));
+		tasks.addTask(2, new AIPanic(1.25));
+		tasks.addTask(3, new EntityAIMate(this, 1.0));
+		tasks.addTask(4, new EntityAITemptButNice(this, 1.2, false, TEMPTATION_ITEMS, TEMPTATION_ITEMS_BUT_NICE));
+		tasks.addTask(5, new EntityAIFollowParent(this, 1.1));
+		tasks.addTask(6, new EntityAIFavorBlock(this, 1, Blocks.WATERLILY));
+		tasks.addTask(7, new EntityAIWanderAvoidWater(this, 1, 0.5F));
+		tasks.addTask(8, new EntityAIWatchClosest(this, EntityPlayer.class, 6));
+		tasks.addTask(9, new EntityAILookIdle(this));
 	}
 
 	@Override
@@ -94,13 +101,13 @@ public class EntityFrog extends EntityAnimal {
 	}
 
 	@Override
-	public boolean isEntityInvulnerable(@Nonnull DamageSource source) {
-		return source == DamageSource.IN_WALL || super.isEntityInvulnerable(source);
+	public float getEyeHeight() {
+		return 0.1f * getSizeModifier();
 	}
 
 	@Override
-	public float getEyeHeight() {
-		return 0.1f * getSizeModifier();
+	public boolean isEntityInsideOpaqueBlock() {
+		return EntityOpacityHandler.isEntityInsideOpaqueBlock(this);
 	}
 
 	public int getTalkTime() {
@@ -113,11 +120,11 @@ public class EntityFrog extends EntityAnimal {
 
 	@Override
 	public void onUpdate() {
-		super.onUpdate();
-
 		float sizeModifier = getSizeModifier();
 		if (height != sizeModifier * 0.5f)
-			setSize(0.9f * sizeModifier, 0.5f * sizeModifier);
+			setSize(0.65f * sizeModifier, 0.5f * sizeModifier);
+
+		super.onUpdate();
 
 		int talkTime = getTalkTime();
 		if (talkTime > 0)
@@ -132,9 +139,10 @@ public class EntityFrog extends EntityAnimal {
 				newFrog.motionX = (Math.random() - 0.5) * multiplier;
 				newFrog.motionY = (Math.random() - 0.5) * multiplier;
 				newFrog.motionZ = (Math.random() - 0.5) * multiplier;
-				world.spawnEntity(newFrog);
+				newFrog.isDuplicate = true;
 				newFrog.spawnCd = 2;
 				newFrog.spawnChain = spawnChain - 1;
+				world.spawnEntity(newFrog);
 				spawnChain = 0;
 			}
 		}
@@ -145,7 +153,7 @@ public class EntityFrog extends EntityAnimal {
 
 	@Override
 	protected boolean canDropLoot() {
-		return spawnChain != 0 && super.canDropLoot();
+		return !isDuplicate && super.canDropLoot();
 	}
 
 	@Nullable
@@ -193,7 +201,7 @@ public class EntityFrog extends EntityAnimal {
 
 		Calendar calendar = world.getCurrentDate();
 		if (Frogs.frogsDoTheFunny && calendar.get(Calendar.DAY_OF_WEEK) == Calendar.WEDNESDAY) {
-			if (!world.isRemote) if (spawnChain > 0) {
+			if (!world.isRemote && spawnChain > 0 && !isDuplicate) {
 				spawnCd = 50;
 				dataManager.set(TALK_TIME, 80);
 				world.playSound(null, posX, posY, posZ, QuarkSounds.ENTITY_FROG_WEDNESDAY, SoundCategory.NEUTRAL, 1F, 1F);
@@ -208,8 +216,14 @@ public class EntityFrog extends EntityAnimal {
 	@Nullable
 	@Override
 	public EntityAgeable createChild(@Nonnull EntityAgeable otherParent) {
+		if (isDuplicate)
+			return null;
+
 		float sizeMod = getSizeModifier();
 		if (otherParent instanceof EntityFrog) {
+			if (((EntityFrog) otherParent).isDuplicate)
+				return null;
+
 			sizeMod += ((EntityFrog) otherParent).getSizeModifier();
 			sizeMod /= 2;
 		}
@@ -237,11 +251,12 @@ public class EntityFrog extends EntityAnimal {
 		if (compound.hasKey("Chain"))
 			spawnChain = compound.getInteger("Chain");
 		dataManager.set(TALK_TIME, compound.getInteger("DudeAmount"));
-		if (compound.hasKey("FrogAmount")) {
-			float sizeModifier = compound.getFloat("FrogAmount");
-			dataManager.set(SIZE_MODIFIER, sizeModifier);
-			setSize(0.9f * sizeModifier, 0.5f * sizeModifier);
-		}
+
+		float sizeModifier = compound.hasKey("FrogAmount") ? compound.getFloat("FrogAmount") : 1f;
+		dataManager.set(SIZE_MODIFIER, sizeModifier);
+		setSize(0.65f * sizeModifier, 0.5f * sizeModifier);
+
+		isDuplicate = compound.getBoolean("FakeFrog");
 	}
 
 	@Override
@@ -251,6 +266,7 @@ public class EntityFrog extends EntityAnimal {
 		compound.setInteger("Cooldown", spawnCd);
 		compound.setInteger("Chain", spawnChain);
 		compound.setInteger("DudeAmount", getTalkTime());
+		compound.setBoolean("FakeFrog", isDuplicate);
 	}
 
 	@Override

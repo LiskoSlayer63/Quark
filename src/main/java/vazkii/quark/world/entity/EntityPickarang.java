@@ -21,7 +21,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
-import net.minecraft.util.EntityDamageSource;
+import net.minecraft.util.EntityDamageSourceIndirect;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.BlockPos;
@@ -57,6 +57,7 @@ public class EntityPickarang extends EntityThrowable {
 	
     public EntityPickarang(World worldIn, EntityLivingBase throwerIn) {
     	super(worldIn, throwerIn);
+    	this.setPosition(posX, throwerIn.posY + throwerIn.getEyeHeight(), posZ);
     }
     
     public void setThrowData(int slot, ItemStack stack) {
@@ -79,12 +80,6 @@ public class EntityPickarang extends EntityThrowable {
 		
 		EntityLivingBase owner = getThrower();
 
-		ItemStack stack = getStack();
-		if(stack.isItemStackDamageable()) {
-			stack.attemptDamageItem(1, world.rand, owner instanceof EntityPlayerMP ? (EntityPlayerMP) owner : null);
-			setStack(stack);
-		}
-
 		if(result.typeOfHit == Type.BLOCK) {
 			dataManager.set(RETURNING, true);
 			
@@ -101,9 +96,11 @@ public class EntityPickarang extends EntityThrowable {
 				player.setHeldItem(EnumHand.MAIN_HAND, getStack());
 
 				if (player.interactionManager.tryHarvestBlock(hit))
-					world.playEvent(2001, hit, Block.getStateId(state));
+					world.playEvent(null, 2001, hit, Block.getStateId(state));
 				else
 					playSound(QuarkSounds.ENTITY_PICKARANG_CLANK, 1, 1);
+
+				setStack(player.getHeldItemMainhand());
 
 				player.setHeldItem(EnumHand.MAIN_HAND, prev);
 			} else
@@ -130,20 +127,28 @@ public class EntityPickarang extends EntityThrowable {
 						int cooldownPeriod = (int) (1.0 / owner.getEntityAttribute(SharedMonsterAttributes.ATTACK_SPEED).getAttributeValue() * 20.0);
 						ObfuscationReflectionHelper.setPrivateValue(EntityLivingBase.class, owner, cooldownPeriod, "field_184617_aD");
 
+						Pickarang.setActivePickarang(this);
+
 						if (owner instanceof EntityPlayer)
 							((EntityPlayer) owner).attackTargetEntityWithCurrentItem(hit);
 						else
 							owner.attackEntityAsMob(hit);
 
+						Pickarang.setActivePickarang(null);
+
 						ObfuscationReflectionHelper.setPrivateValue(EntityLivingBase.class, owner, ticksSinceLastSwing, "field_184617_aD");
 
+						setStack(owner.getHeldItemMainhand());
 						owner.setHeldItem(EnumHand.MAIN_HAND, prev);
 						owner.getAttributeMap().removeAttributeModifiers(modifiers);
 					} else {
 						AttributeMap map = new AttributeMap();
 						map.getAttributeInstance(SharedMonsterAttributes.ATTACK_DAMAGE).setBaseValue(1);
 						map.applyAttributeModifiers(modifiers);
-						hit.attackEntityFrom(new EntityDamageSource("player", hit).setProjectile(),
+						ItemStack stack = getStack();
+						stack.attemptDamageItem(1, world.rand, null);
+						setStack(stack);
+						hit.attackEntityFrom(new EntityDamageSourceIndirect("player", this, this).setProjectile(),
 								(float) map.getAttributeInstance(SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue());
 					}
 
@@ -229,34 +234,36 @@ public class EntityPickarang extends EntityThrowable {
 		        	playSound(QuarkSounds.ENTITY_PICKARANG_PICKUP, 1, 1);
 
 			        if(!stack.isEmpty()) {
-						if(stackInSlot.isEmpty())
+						if(!player.isDead && stackInSlot.isEmpty())
 							player.inventory.setInventorySlotContents(slot, stack);
-						else if(!player.inventory.addItemStackToInventory(stack))
+						else if(player.isDead || !player.inventory.addItemStackToInventory(stack))
 							player.dropItem(stack, false);
 			        }
 
-			        for (EntityItem item : items) {
-			        	ItemStack drop = item.getItem();
-						if(!player.addItemStackToInventory(drop))
-							player.dropItem(drop, false);
-						item.setDead();
-					}
-
-					for (EntityXPOrb xpOrb : xp) {
-						xpOrb.onCollideWithPlayer(player);
-					}
-
-					for (Entity riding : getPassengers()) {
-						if (riding.isDead)
-							continue;
-
-						if (riding instanceof EntityItem) {
-							ItemStack drop = ((EntityItem) riding).getItem();
-							if(!player.addItemStackToInventory(drop))
+			        if (!player.isDead) {
+						for (EntityItem item : items) {
+							ItemStack drop = item.getItem();
+							if (!player.addItemStackToInventory(drop))
 								player.dropItem(drop, false);
-							riding.setDead();
-						} else if (riding instanceof EntityXPOrb)
-							riding.onCollideWithPlayer(player);
+							item.setDead();
+						}
+
+						for (EntityXPOrb xpOrb : xp) {
+							xpOrb.onCollideWithPlayer(player);
+						}
+
+						for (Entity riding : getPassengers()) {
+							if (riding.isDead)
+								continue;
+
+							if (riding instanceof EntityItem) {
+								ItemStack drop = ((EntityItem) riding).getItem();
+								if (!player.addItemStackToInventory(drop))
+									player.dropItem(drop, false);
+								riding.setDead();
+							} else if (riding instanceof EntityXPOrb)
+								riding.onCollideWithPlayer(player);
+						}
 					}
 
 					setDead();

@@ -6,6 +6,7 @@ import net.minecraft.block.state.IBlockState;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.player.EntityPlayer;
@@ -18,6 +19,7 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.SoundCategory;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import vazkii.arl.item.ItemMod;
 import vazkii.quark.base.item.IQuarkItem;
@@ -40,16 +42,49 @@ public class ItemPickarang extends ItemMod implements IQuarkItem {
 		if(Pickarang.durability > 0)
 			setMaxDamage(Pickarang.durability);
 	}
-	
+
+	@Override
+	public boolean hitEntity(ItemStack stack, EntityLivingBase target, EntityLivingBase attacker) {
+		stack.damageItem(2, attacker);
+		return true;
+	}
+
+	@Override
+	public boolean canHarvestBlock(IBlockState blockIn) {
+		switch (Pickarang.harvestLevel) {
+			case 0:
+				return Items.WOODEN_PICKAXE.canHarvestBlock(blockIn) ||
+						Items.WOODEN_AXE.canHarvestBlock(blockIn) ||
+						Items.WOODEN_SHOVEL.canHarvestBlock(blockIn);
+			case 1:
+				return Items.STONE_PICKAXE.canHarvestBlock(blockIn) ||
+						Items.STONE_AXE.canHarvestBlock(blockIn) ||
+						Items.STONE_SHOVEL.canHarvestBlock(blockIn);
+			case 2:
+				return Items.IRON_PICKAXE.canHarvestBlock(blockIn) ||
+						Items.IRON_AXE.canHarvestBlock(blockIn) ||
+						Items.IRON_SHOVEL.canHarvestBlock(blockIn);
+			default:
+				return true;
+		}
+	}
+
+	@Override
+	public boolean onBlockDestroyed(ItemStack stack, World worldIn, IBlockState state, BlockPos pos, EntityLivingBase entityLiving) {
+		if (state.getBlockHardness(worldIn, pos) != 0)
+			stack.damageItem(1, entityLiving);
+		return true;
+	}
+
 	@Nonnull
 	@Override
 	@SuppressWarnings("ConstantConditions")
     public ActionResult<ItemStack> onItemRightClick(World worldIn, EntityPlayer playerIn, @Nonnull EnumHand handIn) {
         ItemStack itemstack = playerIn.getHeldItem(handIn);
         playerIn.setHeldItem(handIn, ItemStack.EMPTY);
-        worldIn.playSound(null, playerIn.posX, playerIn.posY, playerIn.posZ, QuarkSounds.ENTITY_PICKARANG_THROW, SoundCategory.NEUTRAL, 0.5F, 0.4F / (itemRand.nextFloat() * 0.4F + 0.8F));
-
 		int eff = EnchantmentHelper.getEnchantmentLevel(Enchantments.EFFICIENCY, itemstack);
+        worldIn.playSound(null, playerIn.posX, playerIn.posY, playerIn.posZ, QuarkSounds.ENTITY_PICKARANG_THROW, SoundCategory.NEUTRAL, 0.5F + eff * 0.14F, 0.4F / (itemRand.nextFloat() * 0.4F + 0.8F));
+
 
         if(!worldIn.isRemote)  {
         	int slot = handIn == EnumHand.OFF_HAND ? playerIn.inventory.getSizeInventory() - 1 : playerIn.inventory.currentItem;

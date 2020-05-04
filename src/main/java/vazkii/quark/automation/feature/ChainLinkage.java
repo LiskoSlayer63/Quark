@@ -13,8 +13,6 @@ package vazkii.quark.automation.feature;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityBoat;
-import net.minecraft.entity.item.EntityMinecart;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -91,8 +89,9 @@ public class ChainLinkage extends Feature {
 			AWAIT_MAP.put(vehicle, other);
 	}
 
-	public static void onBoatUpdate(EntityBoat boat) {
-		ChainHandler.adjustVehicle(boat);
+	public static void onEntityUpdate(Entity vehicle) {
+		if (ChainHandler.canBeLinkedTo(vehicle))
+			ChainHandler.adjustVehicle(vehicle);
 	}
 
 	public static void drop(Entity vehicle) {
@@ -182,8 +181,7 @@ public class ChainLinkage extends Feature {
 
 	@SubscribeEvent
 	public void onMinecartUpdate(MinecartUpdateEvent event) {
-		EntityMinecart cart = event.getMinecart();
-		ChainHandler.adjustVehicle(cart);
+		onEntityUpdate(event.getMinecart());
 	}
 
 	@Override

@@ -9,6 +9,8 @@ import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.passive.EntityAnimal;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumFacing;
@@ -28,6 +30,7 @@ import java.util.List;
 public class BlockGrate extends BlockMod implements IQuarkBlock {
 
 	private static final AxisAlignedBB AABB = new AxisAlignedBB(0F, 0.9375, 0F, 1F, 1F, 1F);
+	private static final AxisAlignedBB AABB_SPAWN_BLOCK = new AxisAlignedBB(0F, 1F, 0F, 1F, 1.0625F, 1F);
 	
 	public BlockGrate() {
 		super("grate", Material.IRON);
@@ -49,17 +52,23 @@ public class BlockGrate extends BlockMod implements IQuarkBlock {
 	@Override
 	@SuppressWarnings("deprecation")
 	public void addCollisionBoxToList(IBlockState state, @Nonnull World worldIn, @Nonnull BlockPos pos, @Nonnull AxisAlignedBB entityBox, @Nonnull List<AxisAlignedBB> collidingBoxes, Entity entityIn, boolean isActualState) {
-		if(!(entityIn instanceof EntityItem) && entityIn != null)
+		if(entityIn != null && !(entityIn instanceof EntityItem)) {
 			super.addCollisionBoxToList(state, worldIn, pos, entityBox, collidingBoxes, entityIn, isActualState);
 
-		if (entityIn instanceof EntityLiving)
-			addCollisionBoxToList(pos, entityBox, collidingBoxes, getBoundingBox(state, worldIn, pos).expand(0, entityIn.stepHeight + 0.125, 0));
+			if (!(entityIn instanceof EntityPlayer))
+				addCollisionBoxToList(pos, entityBox, collidingBoxes, AABB_SPAWN_BLOCK);
+
+			if (entityIn instanceof EntityAnimal)
+				addCollisionBoxToList(pos, entityBox, collidingBoxes, getBoundingBox(state, worldIn, pos).expand(0, entityIn.stepHeight + 0.125, 0));
+		}
 	}
 
 	@Nullable
 	@Override
 	public PathNodeType getAiPathNodeType(@Nonnull IBlockState state, @Nonnull IBlockAccess world, @Nonnull BlockPos pos, @Nullable EntityLiving entity) {
-		return PathNodeType.DAMAGE_OTHER;
+		if (entity instanceof EntityAnimal)
+			return PathNodeType.DAMAGE_OTHER;
+		return null;
 	}
 
 	@Override

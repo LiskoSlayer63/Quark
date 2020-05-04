@@ -29,6 +29,7 @@ public class BlockCrystal extends BlockMetaVariants<BlockCrystal.Variants> imple
 		setLightLevel(1.0F * 11F / 15F);
 		setLightOpacity(0);
 		setCreativeTab(CreativeTabs.DECORATIONS);
+		setHarvestLevel("pickaxe", 0);
 	}
 	
 	@Override
@@ -39,6 +40,7 @@ public class BlockCrystal extends BlockMetaVariants<BlockCrystal.Variants> imple
 
 	@Nonnull
 	@Override
+	@SideOnly(Side.CLIENT)
 	public BlockRenderLayer getRenderLayer() {
 		return BlockRenderLayer.TRANSLUCENT;
 	}
@@ -65,11 +67,12 @@ public class BlockCrystal extends BlockMetaVariants<BlockCrystal.Variants> imple
 		CRYSTAL_ORANGE(1f, 0.5f, 0f),
 		CRYSTAL_YELLOW(1f, 1f, 0f),
 		CRYSTAL_GREEN(0f, 1f, 0f),
-		CRYSTAL_BLUE(0f, 0.5f, 1f),
+		CRYSTAL_BLUE(0f, 1f, 1f),
 		CRYSTAL_INDIGO(0f, 0f, 1f),
-		CRYSTAL_VIOLET(0.5f, 0f, 1f);
+		CRYSTAL_VIOLET(1f, 0f, 1f),
+		CRYSTAL_BLACK(0f, 0f, 0f);
 
-		private final float[] color;
+		public final float[] color;
 
 		Variants(float r, float g, float b) {
 			this.color = new float[] {r, g, b};

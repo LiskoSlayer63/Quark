@@ -56,6 +56,7 @@ minecraft {
     mappings = config.mc_mappings
     replace 'GRADLE:BUILD', config.build_number
     replace 'GRADLE:VERSION', config.version
+    replace '" + DEV_ENV_HACK + "', ''
 
     // Scala: not even once
     replace 'scala.actors.threadpool.Arrays', 'java.util.Arrays'
@@ -70,7 +71,11 @@ jar {
     exclude "**/unused"
 
     manifest {
-        attributes("FMLCorePluginContainsFMLMod": "true", "FMLCorePlugin": "vazkii.quark.base.asm.LoadingPlugin")
+        attributes(
+                "FMLCorePluginContainsFMLMod": "true",
+                "FMLCorePlugin": "vazkii.quark.base.asm.LoadingPlugin",
+                "FMLAT": "quark_at.cfg"
+        )
     }
 
 }
@@ -88,6 +93,8 @@ processResources {
     from(sourceSets.main.resources.srcDirs) {
         exclude 'mcmod.info', '**/psd/**'
     }
+
+    rename '(.+_at.cfg)', 'META-INF/$1'
 }
 
 task deobfJar(type: Jar) {

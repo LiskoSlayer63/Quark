@@ -19,8 +19,10 @@ import net.minecraft.tileentity.TileEntityFlowerPot;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.ChunkCache;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.property.ExtendedBlockState;
 import net.minecraftforge.common.property.IExtendedBlockState;
 import net.minecraftforge.common.property.IUnlistedProperty;
@@ -96,7 +98,7 @@ public class BlockCustomFlowerPot extends BlockFlowerPot implements IBlockColorP
 		state = super.getActualState(state, world, pos);
 		// if the flower pot type is empty, but we have a flower, set the extra flag
 		if(state.getValue(CONTENTS) == EnumFlowerType.EMPTY) {
-			TileEntity te = world.getTileEntity(pos);
+			TileEntity te = world instanceof ChunkCache ? ((ChunkCache)world).getTileEntity(pos, Chunk.EnumCreateEntityType.CHECK) : world.getTileEntity(pos);
 			if(te instanceof TileEntityFlowerPot) {
 				if(!((TileEntityFlowerPot)te).getFlowerItemStack().isEmpty()) {
 					state = state.withProperty(CUSTOM, true);

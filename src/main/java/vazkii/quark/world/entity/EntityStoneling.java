@@ -1,9 +1,11 @@
 package vazkii.quark.world.entity;
 
+import com.google.common.collect.Sets;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.*;
+import net.minecraft.entity.ai.EntityAITasks;
 import net.minecraft.entity.ai.EntityAITempt;
 import net.minecraft.entity.ai.EntityAIWanderAvoidWater;
 import net.minecraft.entity.player.EntityPlayer;
@@ -33,6 +35,7 @@ import vazkii.quark.world.feature.Stonelings;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Set;
 
 public class EntityStoneling extends EntityCreature {
 
@@ -93,6 +96,11 @@ public class EntityStoneling extends EntityCreature {
 	@Override
 	public void onUpdate() {
 		super.onUpdate();
+
+		if (inWater)
+			stepHeight = 1F;
+		else
+			stepHeight = 0.6F;
 
 		if (!world.isRemote && world.getDifficulty() == EnumDifficulty.PEACEFUL && !isTame)
 			setDead();
@@ -193,6 +201,8 @@ public class EntityStoneling extends EntityCreature {
 				} else if (Stonelings.tamableStonelings && fitsOreKey(playerItem, "gemDiamond")) {
 					heal(8);
 
+					setPlayerMade(true);
+
 					playSound(QuarkSounds.ENTITY_STONELING_PURR, 1F, 1F + world.rand.nextFloat() * 1F);
 
 					if (!player.capabilities.isCreativeMode)
@@ -223,7 +233,7 @@ public class EntityStoneling extends EntityCreature {
 
 		if(!isTame && !world.isRemote) {
 			if (ModuleLoader.isFeatureEnabled(Frogs.class) && rand.nextDouble() < 0.01) {
-				EntityFrog frog = new EntityFrog(world, 0.75f);
+				EntityFrog frog = new EntityFrog(world, 0.25f);
 				frog.setPosition(posX, posY, posZ);
 				world.spawnEntity(frog);
 				frog.startRiding(this);
@@ -240,6 +250,16 @@ public class EntityStoneling extends EntityCreature {
 	@Override
 	public boolean isEntityInvulnerable(@Nonnull DamageSource source) {
 		return source == DamageSource.CACTUS || source.isProjectile() || super.isEntityInvulnerable(source);
+	}
+
+	@Override
+	public boolean canBreatheUnderwater() {
+		return true;
+	}
+
+	@Override
+	public boolean isNotColliding() {
+		return this.world.checkNoEntityCollision(this.getEntityBoundingBox(), this);
 	}
 
 	@Override
@@ -266,8 +286,27 @@ public class EntityStoneling extends EntityCreature {
 	protected void damageEntity(@Nonnull DamageSource damageSrc, float damageAmount) {
 		super.damageEntity(damageSrc, damageAmount);
 
-		if(!isPlayerMade() && damageSrc.getTrueSource() instanceof EntityPlayer)
-			waryTask.startle();
+		if(!isPlayerMade() && damageSrc.getTrueSource() instanceof EntityPlayer) {
+			startle();
+			for (Entity entity : world.getEntitiesWithinAABBExcludingEntity(this,
+					getEntityBoundingBox().grow(16))) {
+				if (entity instanceof EntityStoneling) {
+					EntityStoneling stoneling = (EntityStoneling) entity;
+					if (!stoneling.isPlayerMade() && stoneling.getEntitySenses().canSee(this)) {
+						startle();
+					}
+				}
+			}
+		}
+	}
+
+	public void startle() {
+		waryTask.startle();
+		Set<EntityAITasks.EntityAITaskEntry> entries = Sets.newHashSet(tasks.taskEntries);
+
+		for (EntityAITasks.EntityAITaskEntry task : entries)
+			if (task.action instanceof EntityAITempt)
+				tasks.removeTask(task.action);
 	}
 
 	@Override
@@ -361,6 +400,38 @@ public class EntityStoneling extends EntityCreature {
 	@Override
 	protected SoundEvent getDeathSound() {
 		return QuarkSounds.ENTITY_STONELING_DIE;
+	}
+
+	@Override
+	public int getTalkInterval() {
+		return 1200;
+	}
+
+	@Override
+	public void playLivingSound() {
+		SoundEvent sound = this.getAmbientSound();
+
+		if (sound != null) this.playSound(sound, this.getSoundVolume(), 1f);
+	}
+
+	@Override
+	public void setDead() {
+		super.setDead();
+		for (Entity passenger : getRecursivePassengers())
+			if (!(passenger instanceof EntityPlayer))
+				passenger.setDead();
+	}
+
+	@Nullable
+	@Override
+	protected SoundEvent getAmbientSound() {
+		if (hasCustomName()) {
+			String customName = getCustomNameTag();
+			if (customName.equalsIgnoreCase("michael stevens") || customName.equalsIgnoreCase("vsauce"))
+				return QuarkSounds.ENTITY_STONELING_MICHAEL;
+		}
+
+		return null;
 	}
 
 	// Vanilla copy pasta from EntityMob

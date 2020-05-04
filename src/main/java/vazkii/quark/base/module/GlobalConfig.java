@@ -11,6 +11,9 @@ public final class GlobalConfig {
 	public static boolean enableVariants;
 	public static boolean enableQButton;
 	public static boolean qButtonOnRight;
+	public static boolean usePistonLogicRepl;
+	
+	public static int pistonPushLimit;
 	
 	public static Property qButtonProp;
 
@@ -54,35 +57,34 @@ public final class GlobalConfig {
 				"Set this to true to move the q button to the right of the buttons, instead\n"
 				+ "of to the left as it is by default.", false);
 		
+		usePistonLogicRepl = ConfigHelper.loadPropBool("Use Piston Logic Replacement", category, 
+				"Set this to false to disable quark's piston logic replacement. This will disable quark's piston features.\n"
+				+ "This is intended only if you're having issues, it's not recommended you touch it otherwise.", true);
+		
+		pistonPushLimit = ConfigHelper.loadPropInt("Piston Push Limit", category, 
+				"Note that if you turn off 'Use Piston Logic Replacement', this value will not apply.", 12);
 	}
 	
-	public static void changeConfig(String moduleName, String category, String key, String value, boolean saveToFile) {
+	public static void changeConfig(String category, String key, String value, Property.Type type, boolean saveToFile) {
 		if(!enableConfigCommand)
 			return;
 		
 		Configuration config = ModuleLoader.config;
-		String fullCategory = moduleName;
-		if(!category.equals("-"))
-			fullCategory += "." + category;
 		
-		char type = key.charAt(0);
-		key = key.substring(2);
-		
-		if(config.hasKey(fullCategory, key)) {
-
+		if(config.hasKey(category, key)) {
 			try {
 				switch(type) {
-				case 'B': 
-					boolean b = Boolean.parseBoolean(value);
-					config.get(fullCategory, key, false).setValue(b);
-				case 'I':
-					int i = Integer.parseInt(value);
-					config.get(fullCategory, key, 0).setValue(i);
-				case 'D':
-					double d = Double.parseDouble(value);
-					config.get(fullCategory, key, 0.0).setValue(d);
-				case 'S':
-					config.get(fullCategory, key, "").setValue(value);
+					case BOOLEAN:
+						boolean b = Boolean.parseBoolean(value);
+						config.get(category, key, false).setValue(b);
+					case INTEGER:
+						int i = Integer.parseInt(value);
+						config.get(category, key, 0).setValue(i);
+					case DOUBLE:
+						double d = Double.parseDouble(value);
+						config.get(category, key, 0.0).setValue(d);
+					default:
+						config.get(category, key, "", "", type).setValue(value);
 				}
 			} catch(IllegalArgumentException ignored) {}
 			

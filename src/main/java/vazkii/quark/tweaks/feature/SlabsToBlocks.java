@@ -22,6 +22,9 @@ import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.item.crafting.ShapedRecipes;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.oredict.OreDictionary;
 import net.minecraftforge.oredict.ShapedOreRecipe;
 import vazkii.arl.recipe.MultiRecipe;
@@ -39,6 +42,8 @@ public class SlabsToBlocks extends Feature {
 
 	public static final Map<IBlockState, ItemStack> slabs = new HashMap<>();
 
+	private static final List<ItemStack> alreadyFound = new ArrayList<>();
+
 	public static int originalSize;
 	private MultiRecipe multiRecipe;
 	
@@ -46,17 +51,19 @@ public class SlabsToBlocks extends Feature {
 	public void setupConfig() {
 		originalSize = loadPropInt("Vanilla stack size", "The stack size for the vanilla slab recipe, used for automatically detecting slab recipes", 6);
 	}
-	
-	@Override
-	public void postPreInit() {
-		multiRecipe = new MultiRecipe(new ResourceLocation("quark", "slabs_to_blocks"));
+
+	@SubscribeEvent(priority = EventPriority.LOWEST)
+	public void registerRecipe(RegistryEvent.Register<IRecipe> event) {
+		ResourceLocation key = new ResourceLocation("quark", "slabs_to_blocks");
+		event.getRegistry().register(multiRecipe = new MultiRecipe(key));
 	}
+
 	
 	@Override
 	@SuppressWarnings("deprecation")
 	public void postInit() {
 		List<ResourceLocation> recipeList = new ArrayList<>(CraftingManager.REGISTRY.getKeys());
-		for(ResourceLocation res : recipeList) {
+		recipeLoop: for(ResourceLocation res : recipeList) {
 			IRecipe recipe = CraftingManager.REGISTRY.getObject(res);
 			if(recipe instanceof ShapedRecipes || recipe instanceof ShapedOreRecipe) {
 				NonNullList<Ingredient> recipeItems;
@@ -66,6 +73,16 @@ public class SlabsToBlocks extends Feature {
 
 				ItemStack output = recipe.getRecipeOutput();
 				if(!output.isEmpty() && output.getCount() == originalSize) {
+					ItemStack singleOut = output.copy();
+					singleOut.setCount(1);
+
+					for (ItemStack stack : alreadyFound) {
+						if (ItemStack.areItemStacksEqual(singleOut, stack))
+							continue recipeLoop;
+					}
+
+					alreadyFound.add(singleOut);
+
 					Item outputItem = output.getItem();
 					Block outputBlock = Block.getBlockFromItem(outputItem);
 					if(outputBlock instanceof BlockSlab) {
@@ -83,7 +100,7 @@ public class SlabsToBlocks extends Feature {
 								slabs.put(block.getStateFromMeta(outCopy.getItemDamage()), in);
 							}
 							
-							RecipeHandler.addShapedRecipe(multiRecipe, outCopy, "SS", 'S', in);
+							RecipeHandler.addShapelessRecipe(multiRecipe, outCopy, in, in);
 						}
 					}
 				}
@@ -95,5 +112,9 @@ public class SlabsToBlocks extends Feature {
 	public boolean requiresMinecraftRestartToEnable() {
 		return true;
 	}
-	
+
+	@Override
+	public boolean hasSubscriptions() {
+		return true;
+	}
 }

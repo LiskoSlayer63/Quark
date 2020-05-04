@@ -30,8 +30,10 @@ import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.ChunkCache;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
+import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.arl.block.BlockMod;
@@ -116,9 +118,16 @@ public class BlockRedstoneInductor extends BlockMod implements IQuarkBlock, IBlo
 	}
 
 	@Override
+	public void randomTick(@Nonnull World worldIn, @Nonnull BlockPos pos, @Nonnull IBlockState state, @Nonnull Random random) {
+		// NO-OP
+	}
+
+	@Override
 	public void updateTick(World worldIn, BlockPos pos, IBlockState state, Random rand) {
 		boolean isLocked = isLocked(state);
 		boolean willBeLocked = shouldBeLocked(worldIn, pos, state);
+
+		EnumFacing side = state.getValue(FACING);
 
 		IBlockState finalState = state.withProperty(LOCKED, willBeLocked);
 
@@ -141,25 +150,24 @@ public class BlockRedstoneInductor extends BlockMod implements IQuarkBlock, IBlo
 				boolean isPowered = this.isPowered(state);
 
 				if (isPowered && !shouldBePowered) {
-					finalState = state.withProperty(POWERED, false);
+					finalState = finalState.withProperty(POWERED, false);
 				} else if (!isPowered && shouldBePowered) {
-					finalState = state.withProperty(POWERED, true);
+					finalState = finalState.withProperty(POWERED, true);
 				}
 			}
 		}
 
-		worldIn.setBlockState(pos, finalState, 2);
-
-		this.notifyNeighbors(worldIn, pos, state);
+		worldIn.setBlockState(pos, finalState, 3);
+		worldIn.notifyNeighborsOfStateExcept(pos.offset(side, -1), this, side);
 	}
 
 	protected int getActiveSignal(IBlockAccess world, BlockPos pos) {
-		TileEntity tile = world.getTileEntity(pos);
+		TileEntity tile = world instanceof ChunkCache ? ((ChunkCache)world).getTileEntity(pos, Chunk.EnumCreateEntityType.CHECK) : world.getTileEntity(pos);
 		return tile instanceof TileInductor ? ((TileInductor)tile).getOutputSignal() : 0;
 	}
 
 	protected void updateState(World world, BlockPos pos) {
-		world.updateBlockTick(pos, this, 2, -1);
+		world.scheduleBlockUpdate(pos, this, 1, -1);
 	}
 
 	@Nonnull
@@ -295,20 +303,13 @@ public class BlockRedstoneInductor extends BlockMod implements IQuarkBlock, IBlo
 
 	@Override
 	public void onBlockAdded(World worldIn, BlockPos pos, IBlockState state) {
-		notifyNeighbors(worldIn, pos, state);
-	}
-
-	protected void notifyNeighbors(World worldIn, BlockPos pos, IBlockState state) {
 		BlockRedstoneRandomizer.notify(this, worldIn, pos, state);
 	}
 
 	@Override
 	public void breakBlock(@Nonnull World worldIn, @Nonnull BlockPos pos, @Nonnull IBlockState state) {
-		if(isPowered(state))
-			for(EnumFacing enumfacing : EnumFacing.values())
-				worldIn.notifyNeighborsOfStateChange(pos.offset(enumfacing), this, false);
-
 		super.breakBlock(worldIn, pos, state);
+		BlockRedstoneRandomizer.notify(this, worldIn, pos, state);
 	}
 
 	@Override

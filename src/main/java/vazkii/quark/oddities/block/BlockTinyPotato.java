@@ -104,12 +104,11 @@ public class BlockTinyPotato extends BlockMod implements IQuarkBlock {
 	@Override
 	public void onBlockPlacedBy(World world, BlockPos pos, IBlockState state, EntityLivingBase placer, ItemStack stack) {
 		world.setBlockState(pos, state.withProperty(FACING, placer.getHorizontalFacing().getOpposite()));
-		if (stack.hasDisplayName()) {
-			TileEntity te = world.getTileEntity(pos);
-			if (te instanceof TileTinyPotato) {
+		TileEntity te = world.getTileEntity(pos);
+		if (te instanceof TileTinyPotato) {
+			if (stack.hasDisplayName())
 				((TileTinyPotato) te).name = stack.getDisplayName();
-				((TileTinyPotato) te).angery = ItemNBTHelper.getBoolean(stack, "angery", false);
-			}
+			((TileTinyPotato) te).angery = ItemNBTHelper.getBoolean(stack, "angery", false);
 		}
 	}
 
@@ -141,6 +140,8 @@ public class BlockTinyPotato extends BlockMod implements IQuarkBlock {
 			String name = ((TileTinyPotato) tile).name;
 			if(!name.isEmpty())
 				stack.setStackDisplayName(name);
+			if (((TileTinyPotato) tile).angery)
+				ItemNBTHelper.setBoolean(stack, "angery", true);
 			list.add(stack);
 		}
 	}

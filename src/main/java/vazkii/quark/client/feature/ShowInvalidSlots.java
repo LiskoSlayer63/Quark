@@ -15,10 +15,16 @@ import vazkii.quark.base.module.ModuleLoader;
 public class ShowInvalidSlots extends Feature {
 
 	public static boolean requiresShift;
+	public static double opacity;
+	public static int alphaMask;
 	
 	@Override
 	public void setupConfig() {
 		requiresShift = loadPropBool("Requires Shift", "Set this to true to only display the reds boxes when Shift is held", true);
+		opacity = loadPropDouble("Opacity", "How opaque the overlay is", 1/3.0);
+
+		int alphaAmount = (int) (opacity * 255);
+		alphaMask = alphaAmount << 24;
 	}
 
 	@SideOnly(Side.CLIENT)
@@ -42,6 +48,7 @@ public class ShowInvalidSlots extends Feature {
 
 			GlStateManager.disableLighting();
 			GlStateManager.disableBlend();
+			GlStateManager.disableDepth();
 
 			for (Slot slot : gui.inventorySlots.inventorySlots) {
 				if (slot != slotUnder && !slot.isItemValid(stack) && slot.isEnabled()) {
@@ -52,13 +59,14 @@ public class ShowInvalidSlots extends Feature {
 					int y = slot.yPos;
 
 					GlStateManager.colorMask(true, true, true, false);
-					Gui.drawRect(x, y, x + 16, y + 16, 0x55FF0000);
+					Gui.drawRect(x, y, x + 16, y + 16, 0xFF0000 | alphaMask);
 					GlStateManager.colorMask(true, true, true, true);
 
 					GlStateManager.popMatrix();
 				}
 			}
 
+			GlStateManager.enableDepth();
 			GlStateManager.enableBlend();
 			GlStateManager.enableLighting();
 		}

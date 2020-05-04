@@ -68,7 +68,7 @@ public class ContainerBackpack extends ContainerPlayer {
 
 				slot.onSlotChange(stack, baseStack);
 			} else if (index < 5) {
-				if (!this.mergeItemStack(stack, 9, 45, false) && !this.mergeItemStack(stack, 46, 73, false)) return ItemStack.EMPTY;
+				if (!this.mergeItemStack(stack, 9, 45, false)) return ItemStack.EMPTY;
 			} else if (index < 9) {
 				if (!this.mergeItemStack(stack, 9, 45, false) && !this.mergeItemStack(stack, 46, 73, false)) return ItemStack.EMPTY;
 			} else if (slotType.getSlotType() == EntityEquipmentSlot.Type.ARMOR && !this.inventorySlots.get(equipIndex).getHasStack()) {
@@ -78,7 +78,7 @@ public class ContainerBackpack extends ContainerPlayer {
 			} else if (index < 36) {
 				if (!this.mergeItemStack(stack, 46, 73, false) && !this.mergeItemStack(stack, 36, 45, false)) return ItemStack.EMPTY;
 			} else if (index < 73) {
-				if (!this.mergeItemStack(stack, 9, 36, false) && !this.mergeItemStack(stack, 46, 73, false)) return ItemStack.EMPTY;
+				if (!this.mergeItemStack(stack, 9, 36, false)) return ItemStack.EMPTY;
 			} else {
 				if (!this.mergeItemStack(stack, 46, 73, false) && !this.mergeItemStack(stack, 9, 45, false)) return ItemStack.EMPTY;
 			}

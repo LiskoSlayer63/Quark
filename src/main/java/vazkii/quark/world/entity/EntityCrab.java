@@ -34,6 +34,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import vazkii.quark.base.util.EntityOpacityHandler;
 import vazkii.quark.world.entity.ai.EntityAIRave;
 import vazkii.quark.world.entity.ai.MovementHelperZigZag;
 
@@ -50,7 +51,7 @@ public class EntityCrab extends EntityAnimal {
 	private static final Set<Item> TEMPTATION_ITEMS = Sets.newHashSet(Items.WHEAT, Items.FISH, Items.CHICKEN);
 
 	private static int lightningCooldown;
-	
+
     private boolean crabRave;
     private BlockPos jukeboxPosition;
 
@@ -58,6 +59,19 @@ public class EntityCrab extends EntityAnimal {
 		super(worldIn);
 		this.setSize(0.9F, 0.5F);
 		this.moveHelper = new MovementHelperZigZag(this);
+		
+		spawnableBlock = Blocks.SAND;
+	}
+
+	@Override
+	public boolean canBreatheUnderwater() {
+		return true;
+	}
+
+	@Override
+	public boolean isNotColliding()
+	{
+		return this.world.checkNoEntityCollision(this.getEntityBoundingBox(), this);
 	}
 
 	@Nonnull
@@ -84,7 +98,6 @@ public class EntityCrab extends EntityAnimal {
 
 	@Override
 	protected void initEntityAI() {
-		this.tasks.addTask(0, new EntityAISwimming(this));
 		this.tasks.addTask(1, new EntityAIPanic(this, 1.25D));
 		this.tasks.addTask(2, new EntityAIRave(this));
 		this.tasks.addTask(3, new EntityAIMate(this, 1.0D));
@@ -106,8 +119,18 @@ public class EntityCrab extends EntityAnimal {
 	}
 
 	@Override
+	public boolean isEntityInsideOpaqueBlock() {
+		return EntityOpacityHandler.isEntityInsideOpaqueBlock(this);
+	}
+
+	@Override
 	public void onUpdate() {
 		super.onUpdate();
+
+		if (inWater)
+			stepHeight = 1F;
+		else
+			stepHeight = 0.6F;
 
 		if (lightningCooldown > 0)
 			lightningCooldown--;
@@ -125,6 +148,16 @@ public class EntityCrab extends EntityAnimal {
 			if(belowState.getMaterial() == Material.SAND)
 				world.playEvent(2001, below, Block.getStateId(belowState));
 		}
+	}
+
+	@Override
+	public boolean isPushedByWater() {
+		return false;
+	}
+
+	@Override
+	protected int decreaseAirSupply(int air) {
+		return air;
 	}
 
 	@Override
@@ -202,4 +235,5 @@ public class EntityCrab extends EntityAnimal {
 		compound.setFloat("EnemyCrabRating", getSizeModifier());
 		compound.setInteger("LightningCooldown", lightningCooldown);
 	}
+	
 }

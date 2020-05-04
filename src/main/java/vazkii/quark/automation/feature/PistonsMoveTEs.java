@@ -6,6 +6,8 @@ import net.minecraft.block.BlockChest;
 import net.minecraft.block.BlockJukebox;
 import net.minecraft.block.state.BlockPistonStructureHelper;
 import net.minecraft.block.state.IBlockState;
+import net.minecraft.init.Blocks;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityChest;
 import net.minecraft.util.EnumFacing;
@@ -24,8 +26,8 @@ import java.util.*;
 
 public class PistonsMoveTEs extends Feature {
 
-	private static final WeakHashMap<World, Map<BlockPos, TileEntity>> movements = new WeakHashMap<>();
-	private static final WeakHashMap<World, List<Pair<BlockPos, TileEntity>>> delayedUpdates = new WeakHashMap<>();
+	private static final WeakHashMap<World, Map<BlockPos, NBTTagCompound>> movements = new WeakHashMap<>();
+	private static final WeakHashMap<World, List<Pair<BlockPos, NBTTagCompound>>> delayedUpdates = new WeakHashMap<>();
 
 	public static List<String> renderBlacklist;
 	public static List<String> movementBlacklist;
@@ -50,13 +52,15 @@ public class PistonsMoveTEs extends Feature {
 		if(!delayedUpdates.containsKey(event.world) || event.phase == Phase.START)
 			return;
 		
-		List<Pair<BlockPos, TileEntity>> delays = delayedUpdates.get(event.world);
+		List<Pair<BlockPos, NBTTagCompound>> delays = delayedUpdates.get(event.world);
 		if(delays.isEmpty())
 			return;
 		
-		for(Pair<BlockPos, TileEntity> delay : delays) {
-			event.world.setTileEntity(delay.getLeft(), delay.getRight());
-			delay.getRight().updateContainingBlockInfo();
+		for(Pair<BlockPos, NBTTagCompound> delay : delays) {
+			TileEntity tile = TileEntity.create(event.world, delay.getRight());
+			event.world.setTileEntity(delay.getLeft(), tile);
+			if (tile != null)
+				tile.updateContainingBlockInfo();
 		}
 		
 		delays.clear();
@@ -74,15 +78,21 @@ public class PistonsMoveTEs extends Feature {
 		// Jukeboxes that are playing can't be moved so the music can be stopped
 		if(state.getPropertyKeys().contains(BlockJukebox.HAS_RECORD) && state.getValue(BlockJukebox.HAS_RECORD))
 			return true;
+
+		if (state.getBlock() == Blocks.ENDER_CHEST) // They're obsidian!
+			return true;
 		
 		ResourceLocation res = Block.REGISTRY.getNameForObject(state.getBlock());
 		return PistonsMoveTEs.movementBlacklist.contains(res.toString()) || PistonsMoveTEs.movementBlacklist.contains(res.getNamespace());
 	}
 	
-	public static void detachTileEntities(World world, BlockPistonStructureHelper helper, EnumFacing facing) {
+	public static void detachTileEntities(World world, BlockPistonStructureHelper helper, EnumFacing facing, boolean extending) {
 		if(!ModuleLoader.isFeatureEnabled(PistonsMoveTEs.class))
 			return;
-		
+
+		if (!extending)
+			facing = facing.getOpposite();
+
 		List<BlockPos> moveList = helper.getBlocksToMove();
 		
 		for(BlockPos pos : moveList) {
@@ -157,7 +167,7 @@ public class PistonsMoveTEs extends Feature {
 		if(!movements.containsKey(world))
 			movements.put(world, new HashMap<>());
 		
-		movements.get(world).put(pos, tile);
+		movements.get(world).put(pos, tile.serializeNBT());
 	}
 	
 	public static TileEntity getMovement(World world, BlockPos pos) {
@@ -168,29 +178,32 @@ public class PistonsMoveTEs extends Feature {
 		if(!movements.containsKey(world))
 			return null;
 		
-		Map<BlockPos, TileEntity> worldMovements = movements.get(world);
+		Map<BlockPos, NBTTagCompound> worldMovements = movements.get(world);
 		if(!worldMovements.containsKey(pos))
 			return null;
 		
-		TileEntity ret = worldMovements.get(pos);
+		NBTTagCompound ret = worldMovements.get(pos);
 		if(remove)
 			worldMovements.remove(pos);
-		
-		return ret; 
+
+		return TileEntity.create(world, ret);
 	}
 	
 	private static TileEntity getAndClearMovement(World world, BlockPos pos) {
 		TileEntity tile = getMovement(world, pos, true);
+
 		if(tile != null) {
 			if (IPistonCallback.hasCallback(tile))
 				IPistonCallback.getCallback(tile).onPistonMovementFinished();
-			
+
+			tile.setPos(pos);
+
 			tile.validate();
 			
 			if(tile instanceof TileEntityChest)
 				((TileEntityChest) tile).numPlayersUsing = 0;
 		}
-		
+
 		return tile;
 	}
 	
@@ -198,7 +211,7 @@ public class PistonsMoveTEs extends Feature {
 		if(!delayedUpdates.containsKey(world))
 			delayedUpdates.put(world, new ArrayList<>());
 		
-		delayedUpdates.get(world).add(Pair.of(pos, tile));
+		delayedUpdates.get(world).add(Pair.of(pos, tile.serializeNBT()));
 	}
 	
 	@Override

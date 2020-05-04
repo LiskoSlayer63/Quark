@@ -17,9 +17,13 @@ quarkmisc.nowAfk=You are now AFK (Away From Keyboard).
 quarkmisc.leftAfk=You are no longer AFK.
 quarkmisc.personSleeping=%s is now sleeping.
 quarkmisc.personNotSleeping=%s has stopped sleeping.
-quarkmisc.nightHasPassed=Night has passed.
+quarkmisc.personNapping=%s is now napping.
+quarkmisc.personNotNapping=%s has stopped napping.
+quarkmisc.nightHasPassed=The night has passed.
+quarkmisc.dayHasPassed=The day has passed.
 # The %s is very important!
 quarkmisc.sleepingListHeader=Sleeping Players: %s
+quarkmisc.nappingListHeader=Napping Players: %s
 quarkmisc.buried_chest_map=Buried Treasure Map
 quarkmisc.trashButtonOpen=Click to Delete
 quarkmisc.trashButtonShift=Hold Shift to Open
@@ -88,9 +92,12 @@ quark.subtitles.frog_idle=Frog ribbits
 quark.subtitles.frog_jump=Frog hops
 quark.subtitles.horse_whistle=High-pitched screeching
 quark.subtitles.do_it=Motivation
+quark.subtitles.michael_here=Michael is here
 
 # COMMANDS
-commands.quarkconfig.usage=/quarkconfig <module> <category> <key> <value> [save?] [player]
+commands.quarkconfig.usage=/quark-config <category> <key> <value> [player] [save?]
+commands.quarkconfig.invalid_property=The property %s.%s doesn't exist
+commands.quarkconfig.invalid_category=The category %s doesn't exist
 
 # CONFIG STRINGS
 quark.config.title=Quark Configuration
@@ -415,6 +422,16 @@ tile.quark:crystal_green.name=Green Cave Crystal
 tile.quark:crystal_blue.name=Blue Cave Crystal
 tile.quark:crystal_indigo.name=Indigo Cave Crystal
 tile.quark:crystal_violet.name=Violet Cave Crystal
+tile.quark:crystal_black.name=Black Cave Crystal
+tile.quark:crystal_white_pane.name=White Cave Crystal Sheet
+tile.quark:crystal_red_pane.name=Red Cave Crystal Sheet
+tile.quark:crystal_orange_pane.name=Orange Cave Crystal Sheet
+tile.quark:crystal_yellow_pane.name=Yellow Cave Crystal Sheet
+tile.quark:crystal_green_pane.name=Green Cave Crystal Sheet
+tile.quark:crystal_blue_pane.name=Blue Cave Crystal Sheet
+tile.quark:crystal_indigo_pane.name=Indigo Cave Crystal Sheet
+tile.quark:crystal_violet_pane.name=Violet Cave Crystal Sheet
+tile.quark:crystal_black_pane.name=Black Cave Crystal Sheet
 tile.quark:stained_planks_black.name=Black Stained Planks
 tile.quark:stained_planks_blue.name=Blue Stained Planks
 tile.quark:stained_planks_brown.name=Brown Stained Planks
@@ -646,16 +663,6 @@ tile.quark:frame.name=Frame
 tile.quark:frame_slab.name=Frame Slab
 tile.quark:tiny_potato.name=Tiny Potato
 tile.quark:tiny_potato.angry.name=Angry Potato
-tile.quark:skyfoam.name=Skyfoam
-tile.quark:skylather.name=Skylather
-tile.quark:skylather_brick.name=Skylather Bricks
-tile.quark:skylather_pillar.name=Skylather Pillar
-tile.quark:skylather_slab.name=Skylather Slab
-tile.quark:skylather_stairs.name=Skylather Stairs
-tile.quark:skylather_wall.name=Skylather Wall
-tile.quark:skylather_brick_slab.name=Skylather Brick Slab
-tile.quark:skylather_brick_stairs.name=Skylather Brick Stairs
-tile.quark:skylather_brick_wall.name=Skylather Brick Wall
 tile.quark:gravisand.name=Gravisand
 tile.quark:cobblestone_mossy_stairs.name=Moss Stone Stairs
 tile.quark:cobblestone_mossy_slab.name=Moss Stone Slab
@@ -670,6 +677,12 @@ tile.quark:sakura_sapling.name=Blossoming Sapling
 tile.quark:rope.name=Rope Coil
 tile.quark:blaze_rod.name=Blaze Rod (Block)
 tile.quark:grate.name=Iron Grate
+tile.green_slime_block.name=Green Slime Block
+tile.quark:slime_red.name=Red Slime Block
+tile.quark:slime_blue.name=Blue Slime Block
+tile.quark:slime_cyan.name=Cyan Slime Block
+tile.quark:slime_magenta.name=Magenta Slime Block
+tile.quark:slime_yellow.name=Yellow Slime Block
 
 # ITEM NAMES
 item.quark:glass_shard.name=Glass Shard

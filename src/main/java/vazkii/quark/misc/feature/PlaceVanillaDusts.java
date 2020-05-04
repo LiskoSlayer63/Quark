@@ -2,16 +2,22 @@ package vazkii.quark.misc.feature;
 
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.block.Block;
+import net.minecraft.block.SoundType;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
+import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -58,25 +64,36 @@ public class PlaceVanillaDusts extends Feature {
 			EnumFacing face = res.sideHit;
 
 			if(enableGlowstone && stack.getItem() == Items.GLOWSTONE_DUST)
-				setBlock(player, stack, world, pos, hand, face, glowstone_dust_block, res);
+				setBlock(event, player, stack, world, pos, hand, face, glowstone_dust_block, res);
 			else if(enableGunpowder && stack.getItem() == Items.GUNPOWDER)
-				setBlock(player, stack, world, pos, hand, face, gunpowder_block, res);	
+				setBlock(event, player, stack, world, pos, hand, face, gunpowder_block, res);
 		}
 	}
 
-	public static void setBlock(EntityPlayer player, ItemStack stack, World worldIn, BlockPos pos, EnumHand hand, EnumFacing facing, Block block, RayTraceResult res) {
+
+	@SubscribeEvent
+	public void missingItemMappings(RegistryEvent.MissingMappings<Item> event) {
+		for (RegistryEvent.MissingMappings.Mapping<Item> mapping : event.getMappings()) {
+			if (mapping.key.getPath().equals("glowstone_dust_block") || mapping.key.getPath().equals("gunpowder_block"))
+				mapping.ignore();
+		}
+	}
+
+	@SuppressWarnings("deprecation")
+	public static void setBlock(PlayerInteractEvent event, EntityPlayer player, ItemStack stack, World worldIn, BlockPos pos, EnumHand hand, EnumFacing facing, Block block, RayTraceResult res) {
 		boolean flag = worldIn.getBlockState(pos).getBlock().isReplaceable(worldIn, pos);
 		BlockPos blockpos = flag ? pos : pos.offset(facing);
 		ItemStack itemstack = player.getHeldItem(hand);
 
 		if(player.canPlayerEdit(blockpos, facing, itemstack) && worldIn.mayPlace(worldIn.getBlockState(blockpos).getBlock(), blockpos, false, facing, null) && block.canPlaceBlockAt(worldIn, blockpos)) {
-			IBlockState state = block.getDefaultState();
 	        float hx = (float) (res.hitVec.x - blockpos.getX());
 	        float hy = (float) (res.hitVec.y - blockpos.getY());
 	        float hz = (float) (res.hitVec.z - blockpos.getZ());
-			state = block.getStateForPlacement(worldIn, blockpos, facing, hx, hy, hz, stack.getMetadata(), player);
+			IBlockState state = block.getStateForPlacement(worldIn, blockpos, facing, hx, hy, hz, stack.getMetadata(), player);
 					
 			worldIn.setBlockState(blockpos, state);
+			SoundType soundtype = state.getBlock().getSoundType(state, worldIn, pos, player);
+			worldIn.playSound(player, pos, soundtype.getPlaceSound(), SoundCategory.BLOCKS, (soundtype.getVolume() + 1.0F) / 2.0F, soundtype.getPitch() * 0.8F);
 
 			if(player instanceof EntityPlayerMP)
 				CriteriaTriggers.PLACED_BLOCK.trigger((EntityPlayerMP) player, blockpos, itemstack);
@@ -85,6 +102,9 @@ public class PlaceVanillaDusts extends Feature {
 				itemstack.shrink(1);
 			player.swingArm(hand);
 		}
+
+		event.setCanceled(true);
+		event.setCancellationResult(flag ? EnumActionResult.SUCCESS : EnumActionResult.FAIL);
 	}
 
 	@Override

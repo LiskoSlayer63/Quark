@@ -78,18 +78,11 @@ public class EntityGravisand extends EntityFallingBlock {
 		if(!world.isRemote) {
 			float off = fallDirection < 0 ?  + 0.5F : 0F;
 			BlockPos fallTarget = new BlockPos(posX, posY + fallDirection + off, posZ);
-			boolean hasFallen = !(world.isAirBlock(fallTarget) || BlockGravisand.canFallThrough(world.getBlockState(fallTarget)));
-			if(!onGround && hasFallen)
-				onGround = true;
+
 			
-			if(onGround) {
+			if(collidedVertically) {
 				BlockPos pos = new BlockPos(this);
 				IBlockState iblockstate = world.getBlockState(pos);
-
-				if(!hasFallen) {
-					onGround = false;
-					return;
-				}
 
 				motionX *= 0.7;
 				motionZ *= 0.7;

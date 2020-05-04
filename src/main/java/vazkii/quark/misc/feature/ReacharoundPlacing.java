@@ -1,10 +1,5 @@
 package vazkii.quark.misc.feature;
 
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.commons.lang3.tuple.Pair;
-
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
@@ -22,8 +17,15 @@ import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
+import org.apache.commons.lang3.tuple.Pair;
 import vazkii.quark.base.handler.RayTraceHandler;
 import vazkii.quark.base.module.Feature;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 public class ReacharoundPlacing extends Feature {
 
@@ -42,6 +44,7 @@ public class ReacharoundPlacing extends Feature {
 	}
 	
 	@SubscribeEvent
+	@SideOnly(Side.CLIENT)
 	public void onRender(RenderGameOverlayEvent.Post event) {
 		if(event.getType() != RenderGameOverlayEvent.ElementType.CROSSHAIRS)
 			return;
@@ -71,7 +74,7 @@ public class ReacharoundPlacing extends Feature {
 			EnumHand hand = event.getHand();
 			
 			IBlockState currState = player.world.getBlockState(pos);
-			EnumActionResult res = stack.getItem().onItemUse(player, player.getEntityWorld(), pos, hand, EnumFacing.UP, 0.5F, 0.5F, 0.5F);
+			EnumActionResult res = stack.getItem().onItemUse(player, player.getEntityWorld(), pos, hand, EnumFacing.DOWN, 0.5F, 1F, 0.5F);
 			
 			if(res != EnumActionResult.PASS) {
 				event.setCanceled(true);
@@ -123,7 +126,7 @@ public class ReacharoundPlacing extends Feature {
 	
 	private boolean validateReacharoundStack(ItemStack stack) {
 		Item item = stack.getItem();
-		return item instanceof ItemBlock || whitelist.contains(item.getRegistryName().toString());
+		return item instanceof ItemBlock || whitelist.contains(Objects.toString(item.getRegistryName()).toString());
 	}
 	
 	@Override

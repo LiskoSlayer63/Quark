@@ -17,14 +17,12 @@ import vazkii.quark.client.render.random.RenderChickenRandom;
 import vazkii.quark.client.render.random.RenderCowRandom;
 import vazkii.quark.client.render.random.RenderPigRandom;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class RandomAnimalTextures extends Feature {
 
 	private static ListMultimap<RandomTextureType, ResourceLocation> textures;
+	private static Map<RandomTextureType, ResourceLocation> shinyTextures;
 	
 	private static final int COW_COUNT = 10;
 	private static final int PIG_COUNT = 4;
@@ -32,6 +30,7 @@ public class RandomAnimalTextures extends Feature {
 	private static final int CHICK_COUNT = 3;
 
 	public static boolean enableCow, enablePig, enableChicken, enableChick;
+	public static int shinyAnimalChance;
 	
 	@Override
 	public void setupConfig() {
@@ -39,12 +38,15 @@ public class RandomAnimalTextures extends Feature {
 		enablePig = loadPropBool("Enable Pig", "", true);
 		enableChicken = loadPropBool("Enable Chicken", "", true);
 		enableChick = loadPropBool("Enable Chick", "", true);
+		
+		shinyAnimalChance = loadPropInt("Shiny Animal Chance", "The chance for an animal to have a special \"Shiny\" skin, like a shiny pokemon. This is 1 in X. Set to 0 to disable.", 1024);
 	}
 	
 	@Override
 	@SideOnly(Side.CLIENT)
 	public void preInitClient() {
 		textures = Multimaps.newListMultimap(new EnumMap<>(RandomTextureType.class), ArrayList::new);
+		shinyTextures = new HashMap<>();
 		
 		registerTextures(RandomTextureType.COW, COW_COUNT, new ResourceLocation("textures/entity/cow/cow.png"));
 		registerTextures(RandomTextureType.PIG, PIG_COUNT, new ResourceLocation("textures/entity/pig/pig.png"));
@@ -68,7 +70,11 @@ public class RandomAnimalTextures extends Feature {
 			return styles.get(styles.size() - 1);
 		
 		UUID id = e.getUniqueID();
-		int choice = Math.abs((int) (id.getMostSignificantBits() % styles.size()));
+		long most = id.getMostSignificantBits();
+		if(shinyAnimalChance > 0 && (most % shinyAnimalChance) == 0)
+			return shinyTextures.get(type);
+		
+		int choice = Math.abs((int) (most % styles.size()));
 		return styles.get(choice);
 	}
 
@@ -80,6 +86,8 @@ public class RandomAnimalTextures extends Feature {
 		
 		if(vanilla != null)
 			textures.put(type, vanilla);
+		
+		shinyTextures.put(type, new ResourceLocation(LibMisc.MOD_ID, String.format("textures/entity/random/%s_shiny.png", name)));
 	}
 
 	@SideOnly(Side.CLIENT)

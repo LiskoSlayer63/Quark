@@ -11,6 +11,7 @@ import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.gen.IChunkGenerator;
 import net.minecraftforge.fml.common.IWorldGenerator;
 import vazkii.quark.base.handler.DimensionConfig;
+import vazkii.quark.world.block.BlockCrystal;
 import vazkii.quark.world.feature.CrystalCaves;
 
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public class CrystalCaveGenerator implements IWorldGenerator {
 	
 	@Override
 	public void generate(Random random, int chunkX, int chunkZ, World world, IChunkGenerator chunkGenerator, IChunkProvider chunkProvider) {
-		if(random.nextInt(CrystalCaves.crystalCaveRarity) != 0 || !dims.canSpawnHere(world))
+		if(random.nextDouble() > CrystalCaves.crystalCaveRarity || !dims.canSpawnHere(world))
 			return;
 
 		int x = chunkX * 16 + random.nextInt(16);
@@ -61,10 +62,10 @@ public class CrystalCaveGenerator implements IWorldGenerator {
 		Vec3d expansion = new Vec3d(expandX, expandY, expandZ).normalize();
 		Vec3d curvature = new Vec3d(curveX, curveY, curveZ);
 
-		int color1 = rand.nextInt(8);
+		int color1 = rand.nextInt(BlockCrystal.Variants.values().length);
 		int color2;
 		do {
-			color2 = rand.nextInt(8);
+			color2 = rand.nextInt(BlockCrystal.Variants.values().length);
 		} while(color2 == color1);
 
 		IBlockState crystal1 = CrystalCaves.crystal.getStateFromMeta(color1);
@@ -107,9 +108,9 @@ public class CrystalCaveGenerator implements IWorldGenerator {
 				}
 		
 		for(BlockPos pos : crystals) {
-			if(rand.nextInt(3) == 0)
+			if(rand.nextDouble() < CrystalCaves.crystalRate)
 				makeCrystal(world, pos, rand, rand.nextBoolean() ? crystal1 : crystal2);
-			else if(rand.nextInt(2) == 0) {
+			else if(rand.nextDouble() < CrystalCaves.oreChance) {
 				IBlockState stateAt = world.getBlockState(pos);
 				Block blockAt = stateAt.getBlock();
 				if(blockAt.isAir(stateAt, world, pos) || blockAt == CrystalCaves.crystal || stateAt.getBlockHardness(world, pos) == -1)

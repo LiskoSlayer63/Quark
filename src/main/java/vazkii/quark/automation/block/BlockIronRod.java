@@ -6,6 +6,7 @@ import net.minecraft.block.SoundType;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.properties.PropertyBool;
 import net.minecraft.block.properties.PropertyDirection;
+import net.minecraft.block.state.BlockFaceShape;
 import net.minecraft.block.state.BlockStateContainer;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.creativetab.CreativeTabs;
@@ -22,11 +23,12 @@ import net.minecraft.world.World;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.arl.block.BlockMod;
+import vazkii.quark.api.ICollateralMover;
 import vazkii.quark.base.block.IQuarkBlock;
 
 import javax.annotation.Nonnull;
 
-public class BlockIronRod extends BlockMod implements IQuarkBlock {
+public class BlockIronRod extends BlockMod implements IQuarkBlock, ICollateralMover {
 
 	protected static final AxisAlignedBB IRON_ROD_VERTICAL_AABB = new AxisAlignedBB(0.375D, 0.0D, 0.375D, 0.625D, 1.0D, 0.625D);
 	protected static final AxisAlignedBB IRON_ROD_NS_AABB = new AxisAlignedBB(0.375D, 0.375D, 0.0D, 0.625D, 0.625D, 1.0D);
@@ -41,6 +43,16 @@ public class BlockIronRod extends BlockMod implements IQuarkBlock {
 		setResistance(10.0F);
 		setSoundType(SoundType.METAL);
 		setCreativeTab(CreativeTabs.REDSTONE);
+	}
+	
+	@Override
+	public boolean isCollateralMover(World world, BlockPos source, EnumFacing moveDirection, BlockPos pos) {
+		return moveDirection == world.getBlockState(pos).getValue(FACING);
+	}
+	
+	@Override
+	public MoveResult getCollateralMovement(World world, BlockPos source, EnumFacing moveDirection, EnumFacing side, BlockPos pos) {
+		return side == moveDirection ? MoveResult.BREAK : MoveResult.SKIP;
 	}
 
 	@Override
@@ -138,6 +150,13 @@ public class BlockIronRod extends BlockMod implements IQuarkBlock {
 				return state.withProperty(CONNECTED, false);
 		}
 		return state.withProperty(CONNECTED, true);
+	}
+
+	@Nonnull
+	@Override
+	@SuppressWarnings("deprecation")
+	public BlockFaceShape getBlockFaceShape(IBlockAccess worldIn, IBlockState state, BlockPos pos, EnumFacing face) {
+		return BlockFaceShape.UNDEFINED;
 	}
 	
 }

@@ -48,6 +48,8 @@ public class EntityAIFoxhoundSleep extends EntityAIMoveToBlock {
 		super.startExecuting();
 		hadSlept = false;
 		this.foxhound.getAISit().setSitting(false);
+		this.foxhound.getAISleep().setSleeping(false);
+		this.foxhound.setSitting(false);
 		this.foxhound.setSleeping(false);
 	}
 
@@ -55,6 +57,8 @@ public class EntityAIFoxhoundSleep extends EntityAIMoveToBlock {
 	public void resetTask() {
 		super.resetTask();
 		hadSlept = false;
+		this.foxhound.getAISit().setSitting(false);
+		this.foxhound.getAISleep().setSleeping(false);
 		this.foxhound.setSitting(false);
 		this.foxhound.setSleeping(false);
 	}
@@ -62,12 +66,15 @@ public class EntityAIFoxhoundSleep extends EntityAIMoveToBlock {
 	@Override
 	public void updateTask() {
 		super.updateTask();
-		this.foxhound.getAISit().setSitting(false);
 
-		if (!this.getIsAboveDestination()) {
+		if (!this.getIsAboveDestination() || foxhound.motionX > 0 || foxhound.motionZ > 0) {
+			this.foxhound.getAISit().setSitting(false);
+			this.foxhound.getAISleep().setSleeping(false);
 			this.foxhound.setSitting(false);
 			this.foxhound.setSleeping(false);
 		} else if (!this.foxhound.isSitting()) {
+			this.foxhound.getAISit().setSitting(true);
+			this.foxhound.getAISleep().setSleeping(true);
 			this.foxhound.setSitting(true);
 			this.foxhound.setSleeping(true);
 			hadSlept = true;

@@ -10,11 +10,13 @@
  */
 package vazkii.quark.world.entity;
 
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityAgeable;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.*;
 import net.minecraft.entity.monster.AbstractSkeleton;
+import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityRabbit;
 import net.minecraft.entity.passive.EntitySheep;
@@ -34,13 +36,16 @@ import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.tileentity.TileEntityFurnace;
 import net.minecraft.util.*;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.EnumDifficulty;
 import net.minecraft.world.World;
 import vazkii.arl.util.ItemNBTHelper;
+import vazkii.quark.base.util.EntityOpacityHandler;
 import vazkii.quark.oddities.feature.TinyPotato;
 import vazkii.quark.tweaks.ai.EntityAIWantLove;
 import vazkii.quark.world.entity.ai.EntityAIFoxhoundSleep;
-import vazkii.quark.world.entity.ai.EntityAIIfNoSleep;
+import vazkii.quark.world.entity.ai.EntityAISleep;
 import vazkii.quark.world.feature.Foxhounds;
 
 import javax.annotation.Nonnull;
@@ -48,18 +53,18 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 
-public class EntityFoxhound extends EntityWolf {
+public class EntityFoxhound extends EntityWolf implements IMob {
 
 	public static final ResourceLocation FOXHOUND_LOOT_TABLE = new ResourceLocation("quark", "entities/foxhound");
 
 	private static final DataParameter<Boolean> TEMPTATION = EntityDataManager.createKey(EntityFoxhound.class, DataSerializers.BOOLEAN);
 	private static final DataParameter<Boolean> SLEEPING = EntityDataManager.createKey(EntityFoxhound.class, DataSerializers.BOOLEAN);
 
-	private int timeUntilPotatoEmerges = -1;
+	private int timeUntilPotatoEmerges = 0;
 
 	public EntityFoxhound(World worldIn) {
 		super(worldIn);
-		this.setSize(0.8F, 0.90F);
+		this.setSize(0.8F, 0.8F);
 		this.setPathPriority(PathNodeType.WATER, -1.0F);
 		this.setPathPriority(PathNodeType.LAVA, 1.0F);
 		this.setPathPriority(PathNodeType.DANGER_FIRE, 1.0F);
@@ -81,17 +86,32 @@ public class EntityFoxhound extends EntityWolf {
 	}
 
 	@Override
+	protected boolean canDespawn() {
+		return !isTamed();
+	}
+
+	@Override
+	public boolean isEntityInsideOpaqueBlock() {
+		return EntityOpacityHandler.isEntityInsideOpaqueBlock(this);
+	}
+
+	@Override
 	public void onLivingUpdate() {
 		super.onLivingUpdate();
 
+		if (!world.isRemote && world.getDifficulty() == EnumDifficulty.PEACEFUL && !isTamed()) {
+			setDead();
+			return;
+		}
+
 		if (!world.isRemote && TinyPotato.tiny_potato != null) {
-			if (timeUntilPotatoEmerges == 0) {
-				timeUntilPotatoEmerges = -1;
+			if (timeUntilPotatoEmerges == 1) {
+				timeUntilPotatoEmerges = 0;
 				ItemStack stack = new ItemStack(TinyPotato.tiny_potato);
 				ItemNBTHelper.setBoolean(stack, "angery", true);
 				entityDropItem(stack, 0f);
 				playSound(SoundEvents.ENTITY_GENERIC_HURT, 1f, 1f);
-			} else if (timeUntilPotatoEmerges > 0) {
+			} else if (timeUntilPotatoEmerges > 1) {
 				timeUntilPotatoEmerges--;
 			}
 		}
@@ -104,15 +124,16 @@ public class EntityFoxhound extends EntityWolf {
 
 		if(this.world.isRemote)
 			this.world.spawnParticle(isSleeping() ? EnumParticleTypes.SMOKE_NORMAL : EnumParticleTypes.FLAME, this.posX + (this.rand.nextDouble() - 0.5D) * this.width, this.posY + (this.rand.nextDouble() - 0.5D) * this.height, this.posZ + (this.rand.nextDouble() - 0.5D) * this.width, 0.0D, 0.0D, 0.0D);
-		
+
 		if(isTamed()) {
 			BlockPos below = getPosition().down();
 			TileEntity tile = world.getTileEntity(below);
 			if (tile instanceof TileEntityFurnace) {
 				int cookTime = ((TileEntityFurnace) tile).getField(2);
 				if (cookTime > 0 && cookTime % 3 == 0) {
-					List<EntityFoxhound> foxhounds = world.getEntitiesWithinAABB(EntityFoxhound.class, getEntityBoundingBox());
-					if(foxhounds.size() == 1)
+					List<EntityFoxhound> foxhounds = world.getEntitiesWithinAABB(EntityFoxhound.class, new AxisAlignedBB(getPosition()),
+							(fox) -> fox != null && fox.isTamed());
+					if(!foxhounds.isEmpty() && foxhounds.get(0) == this)
 						((TileEntityFurnace) tile).setField(2, Math.min(199, cookTime + 1));
 				}
 			}
@@ -125,21 +146,25 @@ public class EntityFoxhound extends EntityWolf {
 		return FOXHOUND_LOOT_TABLE;
 	}
 
+	protected EntityAISleep aiSleep;
+
 	@Override
 	protected void initEntityAI() {
 		this.aiSit = new EntityAISit(this);
+		this.aiSleep = new EntityAISleep(this);
 		this.tasks.addTask(1, new EntityAISwimming(this));
-		this.tasks.addTask(2, this.aiSit);
-		this.tasks.addTask(3, new EntityAILeapAtTarget(this, 0.4F));
-		this.tasks.addTask(4, new EntityAIAttackMelee(this, 1.0D, true));
-		this.tasks.addTask(5, new EntityAIFoxhoundSleep(this, 0.8D, true));
-		this.tasks.addTask(6, new EntityAIFoxhoundSleep(this, 0.8D, false));
-		this.tasks.addTask(7, new EntityAIFollowOwner(this, 1.0D, 10.0F, 2.0F));
-		this.tasks.addTask(8, new EntityAIIfNoSleep(this, new EntityAIMate(this, 1.0D)));
-		this.tasks.addTask(9, new EntityAIWanderAvoidWater(this, 1.0D));
-		this.tasks.addTask(10, new EntityAIIfNoSleep(this, new EntityAIBeg(this, 8.0F)));
-		this.tasks.addTask(11, new EntityAIIfNoSleep(this, new EntityAIWatchClosest(this, EntityPlayer.class, 8.0F)));
-		this.tasks.addTask(11, new EntityAIIfNoSleep(this, new EntityAILookIdle(this)));
+		this.tasks.addTask(2, this.aiSleep);
+		this.tasks.addTask(3, this.aiSit);
+		this.tasks.addTask(4, new EntityAILeapAtTarget(this, 0.4F));
+		this.tasks.addTask(5, new EntityAIAttackMelee(this, 1.0D, true));
+		this.tasks.addTask(6, new EntityAIFoxhoundSleep(this, 0.8D, true));
+		this.tasks.addTask(7, new EntityAIFoxhoundSleep(this, 0.8D, false));
+		this.tasks.addTask(8, new EntityAIFollowOwner(this, 1.0D, 10.0F, 2.0F));
+		this.tasks.addTask(9, new EntityAIMate(this, 1.0D));
+		this.tasks.addTask(10, new EntityAIWanderAvoidWater(this, 1.0D));
+		this.tasks.addTask(11, new EntityAIBeg(this, 8.0F));
+		this.tasks.addTask(12, new EntityAIWatchClosest(this, EntityPlayer.class, 8.0F));
+		this.tasks.addTask(12, new EntityAILookIdle(this));
 		this.targetTasks.addTask(1, new EntityAIOwnerHurtByTarget(this));
 		this.targetTasks.addTask(2, new EntityAIOwnerHurtTarget(this));
 		this.targetTasks.addTask(3, new EntityAIHurtByTarget(this, true));
@@ -152,7 +177,7 @@ public class EntityFoxhound extends EntityWolf {
 
 	@Override
 	public boolean isAngry() {
-		return !isTamed() || super.isAngry();
+		return (!isTamed() && world.getDifficulty() != EnumDifficulty.PEACEFUL) || super.isAngry();
 	}
 
 	@Override
@@ -175,6 +200,12 @@ public class EntityFoxhound extends EntityWolf {
 	}
 
 	@Override
+	public boolean attackEntityFrom(@Nonnull DamageSource source, float amount) {
+		setWoke();
+		return super.attackEntityFrom(source, amount);
+	}
+
+	@Override
 	public boolean processInteract(EntityPlayer player, @Nonnull EnumHand hand) {
 		ItemStack itemstack = player.getHeldItem(hand);
 
@@ -182,17 +213,18 @@ public class EntityFoxhound extends EntityWolf {
 			return false;
 
 		if (!this.isTamed() && !itemstack.isEmpty()) {
-			if (itemstack.getItem() == Items.COAL && (player.isCreative() || player.getActivePotionEffect(MobEffects.FIRE_RESISTANCE) != null) && !world.isRemote) {
+			if (itemstack.getItem() == Items.COAL && (world.getDifficulty() == EnumDifficulty.PEACEFUL || player.isCreative() || player.getActivePotionEffect(MobEffects.FIRE_RESISTANCE) != null) && !world.isRemote) {
 				if (rand.nextDouble() < Foxhounds.tameChance) {
-                    this.setTamedBy(player);
-                    this.navigator.clearPath();
-                    this.setAttackTarget(null);
-                    this.aiSit.setSitting(true);
-                    this.setHealth(20.0F);
-                    this.playTameEffect(true);
-                    this.world.setEntityState(this, (byte)7);
+					this.setTamedBy(player);
+					this.navigator.clearPath();
+					this.setAttackTarget(null);
+					this.aiSit.setSitting(true);
+					this.setHealth(20.0F);
+					this.playTameEffect(true);
+					this.world.setEntityState(this, (byte)7);
 				} else {
 					this.playTameEffect(false);
+					this.world.setEntityState(this, (byte)6);
 				}
 
 				if (!player.isCreative())
@@ -206,13 +238,14 @@ public class EntityFoxhound extends EntityWolf {
 			if (!player.isCreative())
 				itemstack.shrink(1);
 
-			this.timeUntilPotatoEmerges = 1200;
+			this.timeUntilPotatoEmerges = 1201;
 
 			return true;
 		}
 
-		if (!world.isRemote)
-			setSleeping(false);
+		if (!world.isRemote) {
+			setWoke();
+		}
 
 		return super.processInteract(player, hand);
 	}
@@ -252,13 +285,45 @@ public class EntityFoxhound extends EntityWolf {
 		return isSleeping() ? null : super.getAmbientSound();
 	}
 
-
 	public boolean isSleeping() {
 		return dataManager.get(SLEEPING);
 	}
 
 	public void setSleeping(boolean sleeping) {
 		dataManager.set(SLEEPING, sleeping);
+	}
+
+	@Override
+	public boolean getCanSpawnHere() {
+        IBlockState iblockstate = world.getBlockState((new BlockPos(this)).down());
+		
+		return world.getDifficulty() != EnumDifficulty.PEACEFUL 
+				&& isValidLightLevel() 
+				&& getBlockPathWeight(new BlockPos(posX, getEntityBoundingBox().minY, posZ)) >= 0F
+				&& iblockstate.canEntitySpawn(this);
+	}
+
+	public EntityAISleep getAISleep() {
+		return aiSleep;
+	}
+
+	private void setWoke() {
+		EntityAISleep sleep = getAISleep();
+		if(sleep != null) {
+			setSleeping(false);
+			sleep.setSleeping(false);
+		}
+	}
+
+	@Override
+	public float getBlockPathWeight(BlockPos pos) {
+		return 0.5F - this.world.getLightBrightness(pos);
+	}
+
+	protected boolean isValidLightLevel() {
+		BlockPos blockpos = new BlockPos(this.posX, this.getEntityBoundingBox().minY, this.posZ);
+		int i = world.getLightFromNeighbors(blockpos);
+		return i < 8;
 	}
 
 }

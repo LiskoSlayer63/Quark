@@ -11,6 +11,7 @@ import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.network.FMLNetworkEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import vazkii.quark.base.lib.LibMisc;
@@ -31,6 +32,8 @@ public class ContributorRewardHandler {
 
 	private static final Set<String> done = Collections.newSetFromMap(new WeakHashMap<>());
 
+	private static Thread thread;
+
 	private static String name;
 
 	private static final Map<String, Integer> tiers = new HashMap<>();
@@ -46,11 +49,17 @@ public class ContributorRewardHandler {
 	}
 
 	public static void init() {
-		new ThreadContributorListLoader();
+		if (thread != null && thread.isAlive())
+			return;
+		thread = new ThreadContributorListLoader();
 	}
 
 	public static int getTier(EntityPlayer player) {
-		return tiers.getOrDefault(player.getName().toLowerCase(Locale.ROOT), 0);
+		return getTier(player.getName());
+	}
+	
+	public static int getTier(String name) {
+		return tiers.getOrDefault(name.toLowerCase(Locale.ROOT), 0);
 	}
 	
 	@SubscribeEvent
@@ -69,6 +78,12 @@ public class ContributorRewardHandler {
 				done.add(uuid);
 			}
 		}
+	}
+
+	@SubscribeEvent
+	@SideOnly(Side.SERVER)
+	public static void onPlayerJoin(FMLNetworkEvent.ClientConnectedToServerEvent event) {
+		ContributorRewardHandler.init();
 	}
 	
 	private static void load(Properties props) {
